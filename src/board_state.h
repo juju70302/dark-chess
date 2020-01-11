@@ -98,14 +98,17 @@ public:
 	struct PieceList{
 		Chess chess;
 		int where;
-		int live;
-	}pieceList[2*16];
+		struct PieceList& operator=(const struct PieceList& pl){chess=pl.chess;where=pl.where;};
+	};
 	struct Move{
 		int dir;
 		int currentPos;
 		int moveType;//go:0,jump:1
 	};
 public:
+	struct PieceList pieceList[2*16];
+	int pieceListIndex[CHESS_NUM];
+
 	Color myColor;
 	int myTurn;
 	Chess board[CHESS_NUM];
@@ -115,9 +118,11 @@ public:
 private:
 	static int jumpTable[4*32*4*4*4*4*4*4*4*4];
 	//static const int validEatTable[16*16];
+
 public:
 	void init(char bdIn[],int closedChessIn[],int myFirstIn=1,Color myColorIn=chessColor::unknown);
 	void print()const;
+	void printPieceList()const;
 	void printBoard()const;
 	int isValid()const;
 
@@ -125,13 +130,14 @@ public:
 	static char intToChar(int intIn);
 	static inline Color flipColor(Color colorIn);
 	inline void flipTurn();
-	inline void flipChessWithoutCheck(int posIn,Chess appearChess);
 
 	inline int canMove(int dir,int currentPos,int moveTypeIn)const;
 	inline int canGo(int dir,int currentPos)const;
 	inline int canJump(int dir,int currentPos)const;
 
+	inline void flipChessWithoutCheck(int posIn,Chess appearChess);
 	inline void goWithoutCheck(int dir,int currentPos);
+	inline void unMove(int currentPos,int prevPos,Chess prevChess);
 	inline void jumpWithoutCheck(int dir,int currentPos);
 
 	inline int jumpPosition(int dir,int currentPos)const;
@@ -145,7 +151,34 @@ public:
 private:
 	static int jumpRightPosition(int currentPos,int pos[8]);
 	static int jumpDownPosition(int currentPos,int pos[4]);
+	inline void changePieceList(int currentPos,int nextPos);
+	inline void removeFromPieceList(int currentPos);
+	inline void addToPieceList(int currentPos,int chessIn);
 };
+
+inline void BoardState::addToPieceList(int currentPos,int chessIn){
+	int clr=colorWithoutCheck(chessIn);
+	int currentIndex=(clr<<4)|movableNum[clr];
+	pieceList[currentIndex].where=currentPos;
+	pieceList[currentIndex].chess=chessIn;
+	pieceListIndex[currentPos]=movableNum[clr];
+	movableNum[clr]++;
+}
+
+inline void BoardState::changePieceList(int currentPos,int nextPos){
+	pieceList[colorWithoutCheck(board[currentPos])<<4|pieceListIndex[currentPos]].where=nextPos;
+	pieceListIndex[nextPos]=pieceListIndex[currentPos];
+	pieceListIndex[currentPos]=chessPos::illegal;
+}
+
+inline void BoardState::removeFromPieceList(int currentPos){
+	int clr=colorWithoutCheck(board[currentPos]);
+	int currentIndex=(clr<<4)|pieceListIndex[currentPos];
+
+	pieceList[currentIndex]=pieceList[(clr<<4)|(movableNum[clr]-1)];
+	pieceListIndex[currentPos]=chessPos::illegal;
+	movableNum[clr]--;
+}
 
 inline int BoardState::canMove(int dir,int currentPos,int moveTypeIn)const{
 //dir must between 0-3,moveType must between 0-1,
@@ -207,15 +240,31 @@ inline int BoardState::jumpPosition(int dir,int currentPos)const{
 
 inline void BoardState::goWithoutCheck(int dir,int currentPos){
 	int nextPos=goNextPos[(dir<<5)|currentPos];
-	if(isMovable(board[nextPos]))
-		movableNum[BoardState::colorWithoutCheck(board[nextPos])]--;
+	if(isMovable(board[nextPos])){
+		removeFromPieceList(nextPos);
+		//movableNum[colorWithoutCheck(board[nextPos])]--;
+	}
+	changePieceList(currentPos,nextPos);
 	board[nextPos]=board[currentPos];
 	board[currentPos]=chessNum::empty;
 }
 
+inline void BoardState::unMove(int currentPos,int prevPos,Chess prevChess){
+	changePieceList(currentPos,prevPos);
+	board[prevPos]=board[currentPos];
+	if(isMovable(prevChess)){
+		addToPieceList(currentPos,prevChess);
+	}
+	board[currentPos]=prevChess;
+}
+
 inline void BoardState::jumpWithoutCheck(int dir,int currentPos){
 	int nextPos=jumpPosition(dir,currentPos);
-	movableNum[BoardState::colorWithoutCheck(board[nextPos])]--;
+
+	removeFromPieceList(nextPos);
+	changePieceList(currentPos,nextPos);
+
+	//movableNum[BoardState::colorWithoutCheck(board[nextPos])]--;
 	board[nextPos]=board[currentPos];
 	board[currentPos]=chessNum::empty;
 }
@@ -223,7 +272,8 @@ inline void BoardState::jumpWithoutCheck(int dir,int currentPos){
 inline void BoardState::flipChessWithoutCheck(int posIn,Chess appearChess){
 	board[posIn]=appearChess;
 	closedChess[appearChess]--;
-	movableNum[colorWithoutCheck(appearChess)]++;
+	//movableNum[colorWithoutCheck(appearChess)]++;
+	addToPieceList(posIn,appearChess);
 }
 
 inline int BoardState::isMovable(Chess chessIn){

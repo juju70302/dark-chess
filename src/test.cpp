@@ -28,10 +28,12 @@ int main(){
 	if(g.isValid())cout<<"board is valid..."<<endl;
 	else cout<<"board illegal!!!"<<endl;
 
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+
 	g.flipChessWithoutCheck(1,chessNum::black::guard);
-	cout<<"after flip>>"<<endl;
-	g.print();
-	//testJumpTable();
+	cout<<"after flip>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+	
 	int currentPosIn=0;	int currentDirIn=chessDirection::down;
 	int currentTypeIn=moveType::go;
 	if(g.canMove(currentDirIn,currentPosIn,currentTypeIn))
@@ -39,8 +41,14 @@ int main(){
 	else
 		cout<<"cannot move..."<<endl;
 	g.goWithoutCheck(currentDirIn,currentPosIn);
-	cout<<"after move>>"<<endl;
-	g.print();
+	cout<<"after move>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+
+	g.unMove(8,0,chessNum::black::king);
+	cout<<endl<<"after unmove>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+
+
 
 	return 0;
 }

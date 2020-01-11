@@ -22,4 +22,4 @@ all: clean make
 exe: make
 	./$(exeFileName)
 clean:
-	rm -rf *.o *.exe
+	rm -rf *.o *.exe $(exeFileName)

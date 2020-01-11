@@ -3,18 +3,20 @@
 void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColorIn){
 	myColor=myColorIn;
 	myTurn=(myFirstIn==0)?0:1;
-	for(int i=0;i<2*16;i++)
-		pieceList[i].live=0;
+	//for(int i=0;i<2*16;i++)pieceList[i].live=0;
 	movableNum[0]=0;movableNum[1]=0;
 	for(int i=0;i<CHESS_NUM;i++){
 		board[i]=(Chess)charToInt(bdIn[i]);
 		if(isMovable(board[i])){
 			int clr=(int)colorWithoutCheck(board[i]);
-			pieceList[(clr<<4)|movableNum[clr]].live=1;
+			//pieceList[(clr<<4)|movableNum[clr]].live=1;
 			pieceList[(clr<<4)|movableNum[clr]].where=i;
 			pieceList[(clr<<4)|movableNum[clr]].chess=board[i];
+			pieceListIndex[i]=movableNum[clr];
 			movableNum[clr]++;
 		}
+		else
+			pieceListIndex[i]=chessPos::illegal;
 	}
 	for(int i=0;i<2;i++)
 		for(int j=0;j<PIECE_NUM;j++)
@@ -44,6 +46,27 @@ int BoardState::isValid()const{
 			if(pieceCount[(i<<3)|j]>2)return 0;
 	}
 	return 1;
+}
+
+void BoardState::printPieceList()const{
+	std::cout<<"pieceList(red)>>"<<std::endl;
+	for(int i=0;i<movableNum[(int)chessColor::red];i++)
+		std::cout<<intToChar(pieceList[((int)chessColor::red)<<4|i].chess)<<"\t";
+	std::cout<<std::endl<<"pieceList(black)>>"<<std::endl;
+	for(int i=0;i<movableNum[(int)chessColor::black];i++)
+		std::cout<<intToChar(pieceList[((int)chessColor::black)<<4|i].chess)<<"\t";
+	std::cout<<std::endl<<"pieceListIndex>>"<<std::endl;
+	for(int i=0;i<CHESS_NUM/2;i++){
+		for(int j=0;j<2;j++){
+			std::cout<<"  ["<<i*2+j<<"] = ";
+			if(pieceListIndex[i*2+j]!=chessPos::illegal)
+				std::cout<<pieceListIndex[i*2+j]<<"("<<
+					intToChar(pieceList[colorWithoutCheck(board[i*2+j])<<4|(pieceListIndex[i*2+j])].chess)<<")";
+			else
+				std::cout<<"X   ";
+		}
+		std::cout<<std::endl;
+	}
 }
 
 void BoardState::print()const{
@@ -117,7 +140,8 @@ char BoardState::intToChar(int intIn){
 			return chessChar::black::pawn;
 		default:
 #ifdef _WARNING_MESSAGE_
-			std::cout<<"Warning:int BoardState::charToInt(char):unkown input..."<<std::endl;
+			std::cout<<"Warning:int BoardState::charToInt(char):unkown input \""<<
+			intIn<<"\"..."<<std::endl;
 #endif
 			return chessNum::empty;
 	}
