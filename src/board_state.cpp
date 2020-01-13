@@ -5,6 +5,7 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 	myTurn=(myFirstIn==0)?0:1;
 	//for(int i=0;i<2*16;i++)pieceList[i].live=0;
 	movableNum[0]=0;movableNum[1]=0;
+	for(int i=0;i<2;i++)for(int j=0;j<7;j++)movableList[(i<<3)|j]=0;
 	for(int i=0;i<CHESS_NUM;i++){
 		board[i]=(Chess)charToInt(bdIn[i]);
 		if(isMovable(board[i])){
@@ -13,6 +14,7 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 			pieceList[(clr<<4)|movableNum[clr]].where=i;
 			pieceList[(clr<<4)|movableNum[clr]].chess=board[i];
 			pieceListIndex[i]=movableNum[clr];
+			movableList[board[i]]++;
 			movableNum[clr]++;
 		}
 		else
@@ -49,24 +51,27 @@ int BoardState::isValid()const{
 }
 
 void BoardState::printPieceList()const{
-	std::cout<<"pieceList(red)>>"<<std::endl;
+	std::cout<<"movableList( red )>>";
+	for(int i=0;i<7;i++)std::cout<<" "<<movableList[i];
+	std::cout<<std::endl<<"movableList(black)>>";
+	for(int i=8;i<15;i++)std::cout<<" "<<movableList[i];
+	std::cout<<std::endl<<"pieceList(red)>>   ";
 	for(int i=0;i<movableNum[(int)chessColor::red];i++)
-		std::cout<<intToChar(pieceList[((int)chessColor::red)<<4|i].chess)<<"\t";
-	std::cout<<std::endl<<"pieceList(black)>>"<<std::endl;
+		std::cout<<intToChar(pieceList[((int)chessColor::red)<<4|i].chess)<<" ";
+	std::cout<<std::endl<<"pieceList(black)>> ";
 	for(int i=0;i<movableNum[(int)chessColor::black];i++)
-		std::cout<<intToChar(pieceList[((int)chessColor::black)<<4|i].chess)<<"\t";
+		std::cout<<intToChar(pieceList[((int)chessColor::black)<<4|i].chess)<<" ";
 	std::cout<<std::endl<<"pieceListIndex>>"<<std::endl;
-	for(int i=0;i<CHESS_NUM/2;i++){
-		for(int j=0;j<2;j++){
-			std::cout<<"  ["<<i*2+j<<"] = ";
-			if(pieceListIndex[i*2+j]!=chessPos::illegal)
-				std::cout<<pieceListIndex[i*2+j]<<"("<<
-					intToChar(pieceList[colorWithoutCheck(board[i*2+j])<<4|(pieceListIndex[i*2+j])].chess)<<")";
-			else
-				std::cout<<"X   ";
-		}
-		std::cout<<std::endl;
+	for(int i=0;i<CHESS_NUM;i++){
+		std::cout<<"  ["<<i<<"] = ";
+		if(pieceListIndex[i]!=chessPos::illegal)
+			std::cout<<pieceListIndex[i]<<"("<<
+				intToChar(pieceList[colorWithoutCheck(board[i])<<4|(pieceListIndex[i])].chess)<<")";
+		else
+			std::cout<<"X   ";
+		if(i%3==2)std::cout<<std::endl;
 	}
+	std::cout<<std::endl;
 }
 
 void BoardState::print()const{

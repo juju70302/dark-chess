@@ -1,5 +1,6 @@
 #include "MyAI.h"
 #include "board_state.h"
+#include "search.h"
 #include <iostream>
 #include <cstdio>
 
@@ -7,8 +8,88 @@ using namespace std;
 
 void init();
 void testJumpTable();
+void testMove();
+void testEvaluate();
+void testGenerate();
 
 int main(){
+	init();
+	testGenerate();
+	//testMove();
+	//testEvaluate();
+
+	return 0;
+}
+
+void testGenerate(){
+	char bdIn[32]={
+		'-','-','-','-','-','-','-','-',
+		'K','-','-','-','-','-','-','-',
+		'-','-','-','-','-','-','-','-',
+		'k','-','P','-','-','-','-','-'
+	};
+	int closed[]={
+		0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0
+	};
+
+	BoardState g;
+	g.init(bdIn,closed,0,chessColor::red);
+	cout<<"original board>>"<<endl<<endl;g.print();
+
+	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
+
+	struct Move mList[200];
+	int mNum=generateMove(g,mList,chessColor::black);
+	cout<<endl<<"move num=\""<<mNum<<"\""<<endl;
+	for(int i=0;i<mNum;i++){
+		cout<<mList[i].toString()<<endl;
+	}
+	cout<<endl;
+
+	int point=negaScout(g,-100,100,2);
+	cout<<"count point=\""<<point<<"\""<<endl<<endl;
+
+	//cout<<"after movement's board>>"<<endl<<endl;g.print();
+	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
+
+	//cout<<"flip red=\""<<BoardState::flipColor(chessColor::red)<<"\""<<endl;
+	//cout<<"flip red twice=\""<<BoardState::flipColor(BoardState::flipColor(chessColor::red))<<"\""<<endl;
+	//cout<<"flip black=\""<<BoardState::flipColor(chessColor::black)<<"\""<<endl;
+	//cout<<"flip black twice=\""<<BoardState::flipColor(BoardState::flipColor(chessColor::black))<<"\""<<endl;
+
+	//BoardState g1;g1.init(bdIn,closed,1,chessColor::black);
+	//cout<<"turn=\""<<g1.myTurn<<"\""<<endl;
+	//g1.flipTurn();
+	//cout<<"flip turn=\""<<g1.myTurn<<"\""<<endl;
+	//g1.flipTurn();
+	//cout<<"flip turn twice=\""<<g1.myTurn<<"\""<<endl;
+}
+
+void testEvaluate(){
+	char bdIn[32]={
+		'-','X','-','c','C','C','X','X',
+		'-','X','X','X','G','X','X','X',
+		'-','X','X','X','X','c','X','-',
+		'X','X','m','X','X','m','G','X'
+	};
+	int closed[]={
+		0,0,2,2,2,0,3,
+		0,2,0,2,2,0,4
+	};
+
+	BoardState g;
+	g.init(bdIn,closed,1,chessColor::black);
+
+	cout<<"original board>>"<<endl;
+	cout<<endl;g.print();
+
+	evaluatingFunction(g);
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+
+}
+
+void testMove(){
 	char bdIn[32]={
 		'K','X','-','c','C','C','X','X',
 		'k','X','X','X','G','X','X','X',
@@ -19,38 +100,46 @@ int main(){
 		0,0,2,2,2,0,3,
 		0,2,0,2,2,0,4
 	};
-	init();
 	BoardState g;
 	g.init(bdIn,closed,1,chessColor::unknown);
 
-	cout<<"original board>>"<<endl;
-	g.print();
+	cout<<"original board>>"<<endl;g.print();cout<<endl;
 	if(g.isValid())cout<<"board is valid..."<<endl;
 	else cout<<"board illegal!!!"<<endl;
 
-	cout<<"pieceList>>"<<endl;g.printPieceList();
+	cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
 
 	g.flipChessWithoutCheck(1,chessNum::black::guard);
-	cout<<"after flip>>"<<endl;g.print();
+	cout<<endl<<"after flip>>"<<endl;g.print();
 	cout<<"pieceList>>"<<endl;g.printPieceList();
-	
-	int currentPosIn=0;	int currentDirIn=chessDirection::down;
-	int currentTypeIn=moveType::go;
-	if(g.canMove(currentDirIn,currentPosIn,currentTypeIn))
-		cout<<"can move\""<<BoardState::intToChar(g.board[currentPosIn])<<"\""<<endl;
-	else
-		cout<<"cannot move..."<<endl;
-	g.goWithoutCheck(currentDirIn,currentPosIn);
-	cout<<"after move>>"<<endl;g.print();
-	cout<<"pieceList>>"<<endl;g.printPieceList();
-
-	g.unMove(8,0,chessNum::black::king);
+/*
+	g.unMove(1,1,chessNum::dark);
 	cout<<endl<<"after unmove>>"<<endl;g.print();
 	cout<<"pieceList>>"<<endl;g.printPieceList();
-
-
-
-	return 0;
+//*/
+///*
+	Move m;
+	m.currentPos=0;m.dir=chessDirection::down;
+	m.type=moveType::go;
+	cout<<endl;
+	if(g.canMove(m.dir,m.currentPos,m.type,m.nextPos,m.nextChess))
+		cout<<"can move\""<<BoardState::intToChar(g.board[m.currentPos])<<"\""<<endl;
+	else
+		cout<<"cannot move..."<<endl;
+	//g.goWithoutCheck(currentDirIn,currentPosIn);
+	//g.jumpWithoutCheck(m.dir,m.currentPos,m.nextPos,m.nextChess);
+	g.moveWithoutCheck(m);
+	cout<<endl<<"after move>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+///*
+	g.unMove(m);
+	cout<<endl<<"after unmove>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+/*
+	g.unMove(1,1,chessNum::dark);
+	cout<<endl<<"after unmove>>"<<endl;g.print();
+	cout<<"pieceList>>"<<endl;g.printPieceList();
+//*/
 }
 
 void testJumpTable(){
