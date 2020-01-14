@@ -23,6 +23,11 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 	for(int i=0;i<2;i++)
 		for(int j=0;j<PIECE_NUM;j++)
 			closedChess[(i<<3)|j]=closedChessIn[i*PIECE_NUM+j];
+#ifdef _USING_TRANS_TABLE_
+	if((myColor==chessColor::red)||(myColor==chessColor::black))
+		hashValue=TransTable::hash(TransTable::hash((myTurn)?myColor:flipColor(myColor)),
+			TransTable::hash(board));
+#endif
 }
 
 int BoardState::isValid()const{

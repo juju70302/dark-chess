@@ -1,6 +1,8 @@
 #include <iostream>
+#include <cstdio>
 
 #define _WARNING_MESSAGE_
+#define _USING_TRANS_TABLE_
 
 #ifndef _DEFINITION_H_
 #define _DEFINITION_H_
@@ -76,6 +78,8 @@ namespace chessPos{
 	static const int max=31;
 	static const int min=0;
 	static const int illegal=32;
+	static const int death=33;
+	static const int covered=34;
 };
 
 namespace chessDirection{

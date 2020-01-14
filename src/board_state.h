@@ -1,4 +1,5 @@
 #include "definition.h"
+#include "trans_table.h"
 #include <string>
 #include <sstream>
 
@@ -58,6 +59,9 @@ public:
 	int movableNum[2];
 	Chess movableList[2*8];
 	static const int goNextPos[4*32];
+#ifdef _USING_TRANS_TABLE_
+	KeyType hashValue;
+#endif
 private:
 	static int jumpTable[4*32*4*4*4*4*4*4*4*4];
 public:
@@ -73,6 +77,7 @@ public:
 	static inline Color flipColor(Color colorIn);
 	inline void flipTurn();
 
+	inline int canMove(struct Move& moveIn)const;
 	inline int canMove(int dir,int currentPos,int moveTypeIn,int& nextPos,Chess& nextChess)const;
 	inline int canGo(int dir,int currentPos,int& nextPos,Chess& nextChess)const;
 	inline int canJump(int dir,int currentPos,int& nextPos,Chess& nextChess)const;
@@ -100,15 +105,6 @@ private:
 	inline void addToPieceList(int currentPos,int chessIn);
 };
 
-inline void BoardState::moveWithoutCheck(const struct Move& moveIn){
-	if(moveIn.type==moveType::go)
-		goWithoutCheck(moveIn.dir,moveIn.currentPos);
-	else if(moveIn.type==moveType::flip)
-		flipChessWithoutCheck(moveIn.currentPos,moveIn.nextPos);
-	else//jump
-		jumpWithoutCheck(moveIn.dir,moveIn.currentPos);
-}
-
 inline void BoardState::addToPieceList(int currentPos,int chessIn){
 	int clr=(int)colorWithoutCheck(chessIn);
 	int currentIndex=(clr<<4)|movableNum[clr];
@@ -134,6 +130,14 @@ inline void BoardState::removeFromPieceList(int currentPos){
 	pieceListIndex[pieceList[lastIndex].where]=pieceListIndex[currentPos];
 	pieceListIndex[currentPos]=chessPos::illegal;
 	movableNum[clr]--;
+}
+
+inline int BoardState::canMove(struct Move& moveIn)const{
+	if(moveIn.type==moveType::flip){
+		moveIn.nextPos=moveIn.currentPos;
+		moveIn.currentChess=chessNum::dark;
+	}
+	return canMove(moveIn.dir,moveIn.currentPos,moveIn.type,moveIn.nextPos,moveIn.nextChess);
 }
 
 inline int BoardState::canMove(int dir,int currentPos,int moveTypeIn,int& nextPos,Chess& nextChess)const{
@@ -198,38 +202,65 @@ inline int BoardState::jumpPosition(int dir,int currentPos)const{
 		(ch[2]<<10)|(ch[3]<<8)];
 }
 
-inline void BoardState::goWithoutCheck(int dir,int currentPos){
-	int nextPos=goNextPos[(dir<<5)|currentPos];
-	int nextChess=board[nextPos];
-	if(isMovable(nextChess)){
-		removeFromPieceList(nextPos);
-		movableList[nextChess]--;
-	}
-	changePieceList(currentPos,nextPos);
-	board[nextPos]=board[currentPos];
-	board[currentPos]=chessNum::empty;
-}
-
 inline void BoardState::unMove(const struct Move& moveIn){
 	unMove(moveIn.nextPos,moveIn.currentPos,moveIn.nextChess);
 }
 
 inline void BoardState::unMove(int currentPos,int prevPos,Chess prevChess){
 	if(currentPos==prevPos){//unflip
+#ifdef _USING_TRANS_TABLE_
+		hashValue=TransTable::removeChess(hashValue,currentPos,board[currentPos]);
+		hashValue=TransTable::addChess(hashValue,currentPos,chessNum::dark);
+#endif
 		removeFromPieceList(currentPos);
 		closedChess[(colorWithoutCheck(board[currentPos])<<3)|type(board[currentPos])]++;
 		movableList[board[currentPos]]--;
 		board[currentPos]=chessNum::dark;
 		return;
 	}
+#ifdef _USING_TRANS_TABLE_
+	hashValue=TransTable::removeChess(hashValue,currentPos,board[currentPos]);
+	hashValue=TransTable::addChess(hashValue,prevPos,board[currentPos]);
+#endif
 	
 	changePieceList(currentPos,prevPos);
 	board[prevPos]=board[currentPos];
 	if(isMovable(prevChess)){
+#ifdef _USING_TRANS_TABLE_
+		hashValue=TransTable::addChess(hashValue,currentPos,prevChess);
+#endif
 		addToPieceList(currentPos,prevChess);
 		movableList[prevChess]++;
 	}
 	board[currentPos]=prevChess;
+}
+
+inline void BoardState::moveWithoutCheck(const struct Move& moveIn){
+	if(moveIn.type==moveType::go)
+		goWithoutCheck(moveIn.dir,moveIn.currentPos);
+	else if(moveIn.type==moveType::flip)
+		flipChessWithoutCheck(moveIn.currentPos,moveIn.nextPos);
+	else//jump
+		jumpWithoutCheck(moveIn.dir,moveIn.currentPos);
+}
+
+inline void BoardState::goWithoutCheck(int dir,int currentPos){
+	int nextPos=goNextPos[(dir<<5)|currentPos];
+	int nextChess=board[nextPos];
+	if(isMovable(nextChess)){
+		removeFromPieceList(nextPos);
+		movableList[nextChess]--;
+#ifdef _USING_TRANS_TABLE_
+		hashValue=TransTable::removeChess(hashValue,nextPos,nextChess);
+#endif
+	}
+#ifdef _USING_TRANS_TABLE_
+	hashValue=TransTable::removeChess(hashValue,currentPos,board[currentPos]);
+	hashValue=TransTable::addChess(hashValue,nextPos,board[currentPos]);
+#endif
+	changePieceList(currentPos,nextPos);
+	board[nextPos]=board[currentPos];
+	board[currentPos]=chessNum::empty;
 }
 
 inline void BoardState::jumpWithoutCheck(int dir,int currentPos){
@@ -238,6 +269,11 @@ inline void BoardState::jumpWithoutCheck(int dir,int currentPos){
 
 	removeFromPieceList(nextPos);
 	changePieceList(currentPos,nextPos);
+#ifdef _USING_TRANS_TABLE_
+	hashValue=TransTable::removeChess(hashValue,nextPos,nextChess);
+	hashValue=TransTable::removeChess(hashValue,currentPos,board[currentPos]);
+	hashValue=TransTable::addChess(hashValue,nextPos,board[currentPos]);
+#endif
 
 	movableList[nextChess]--;
 	board[nextPos]=board[currentPos];
@@ -245,6 +281,10 @@ inline void BoardState::jumpWithoutCheck(int dir,int currentPos){
 }
 
 inline void BoardState::flipChessWithoutCheck(int posIn,Chess appearChess){
+#ifdef _USING_TRANS_TABLE_
+	hashValue=TransTable::removeChess(hashValue,posIn,chessNum::dark);
+	hashValue=TransTable::addChess(hashValue,posIn,appearChess);
+#endif
 	board[posIn]=appearChess;
 	closedChess[appearChess]--;
 	movableList[appearChess]++;
@@ -270,6 +310,9 @@ inline Color BoardState::flipColor(Color colorIn){
 inline void BoardState::flipTurn(){
 #ifdef _WARNING_MESSAGE_
 	if(myTurn!=0&&myTurn!=1)std::cout<<"Warning:void BoardState::flipTurn()>>myTurn is unknown..."<<std::endl;
+#endif
+#ifdef _USING_TRANS_TABLE_
+	hashValue=TransTable::flipColor(hashValue);
 #endif
 	myTurn^=0b0001;
 }

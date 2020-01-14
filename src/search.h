@@ -1,4 +1,5 @@
 #include "board_state.h"
+#include "trans_table.h"
 #include <algorithm>
 
 #ifndef _SEARCH_H_
@@ -26,6 +27,100 @@ inline int openMaterialValues(const BoardState& boardIn,const int materialValueT
 inline int closedMaterialValues(const BoardState& boardIn,const int materialValueTable[16]);
 inline int generateMove(const BoardState& boardIn,Move moveList[],Color turn);
 
+#ifdef _USING_TRANS_TABLE_
+inline int negaScout(BoardState& boardIn,TransTable& transTableIn,int alpha,int beta,int depth){
+	//terminal consition
+	if(depth==0||boardIn.isOver())
+		return evaluatingFunction(boardIn);
+
+	static const int inf=1000000;
+	TransTable::Value::Data* hashValue;int hitResult;
+	int m,n,scoutT;
+	struct Move moveList[Move::maxBranch+1];
+	int moveNum;
+
+	//test whether hit the hash table...
+	hashValue=nullptr;m=-1*inf;
+	hitResult=transTableIn.isHit(boardIn.hashValue,&hashValue);
+	if(hitResult){
+		if(hashValue->depth >= depth){
+			//Immediately return while hit exactly value!!
+			if(hashValue->flag == TransTable::Value::Data::exact)
+				return hashValue->score;
+			if(hashValue->flag == TransTable::Value::Data::upper){
+				alpha=std::max(alpha,(int)hashValue->score);
+				if(alpha>=beta)return alpha;
+			}
+			if(hashValue->flag == TransTable::Value::Data::lower){
+				beta=std::min(beta,(int)hashValue->score);
+				if(beta<=alpha)return alpha;
+			}
+		}
+		else if(hashValue->flag == TransTable::Value::Data::exact){
+			m=hashValue->score;
+		}
+	}
+
+	//generating move...
+	moveNum=generateMove(boardIn,moveList,(boardIn.myTurn==0)?boardIn.flipColor(boardIn.myColor):boardIn.myColor);
+
+	if(moveNum==0){
+//std::cout<<"Error:no move in moveList..."<<std::endl<<"board>>"<<std::endl;boardIn.print();std::cout<<std::endl;
+		return evaluatingFunction(boardIn);
+	}
+
+	m=std::max(-1*inf,m);	//the current lower bound; fail soft
+	n=beta;		//the current upper bound
+	for(int moveIndex=0;moveIndex<moveNum;moveIndex++){
+		boardIn.moveWithoutCheck(moveList[moveIndex]);
+		boardIn.flipTurn();
+
+		//scout first
+		scoutT=-1*negaScout(boardIn,transTableIn,-1*n,-1*std::max(alpha,m),depth-1);
+
+//std::cout<<std::endl;for(int i=0;i<(2-depth);i++)std::cout<<"  ";
+//std::cout<<std::endl<<"score=\""<<scoutT<<"\""<<std::endl;
+//std::cout<<"board>>"<<std::endl;boardIn.print();
+
+		if(scoutT>m){
+			if((n == beta)||(depth < 3)||(scoutT >= beta))
+				m=scoutT;
+			else//re-search...
+				m=-1*negaScout(boardIn,transTableIn,-1*beta,-1*scoutT,depth-1);
+		}
+
+		//cut-off
+		if(m>=beta){
+			boardIn.flipTurn();
+			boardIn.unMove(moveList[moveIndex]);
+
+			//update trans table...
+			if((!hitResult)||(hashValue->depth < depth))
+				transTableIn.update(boardIn.hashValue,m,TransTable::Value::Data::lower,depth);
+
+			return m;
+		}
+
+		//set up a null window
+		n=std::max(alpha,m)+1;
+
+		//reset to original position...
+		boardIn.flipTurn();
+		boardIn.unMove(moveList[moveIndex]);
+	}
+	if(m>alpha){
+		if((!hitResult)||(hashValue->depth < depth)||((hashValue->depth == depth)&&
+		  (hashValue->flag != TransTable::Value::Data::exact)))
+			transTableIn.update(boardIn.hashValue,m,TransTable::Value::Data::exact,depth);
+	}
+	else{
+		if((!hitResult)||(hashValue->depth < depth))
+			transTableIn.update(boardIn.hashValue,m,TransTable::Value::Data::upper,depth);
+	}
+
+	return m;
+}
+#else
 inline int negaScout(BoardState& boardIn,int alpha,int beta,int depth){
 	//terminal consition
 	if(depth==0||boardIn.isOver())	return evaluatingFunction(boardIn);
@@ -77,6 +172,7 @@ inline int negaScout(BoardState& boardIn,int alpha,int beta,int depth){
 	}
 	return m;
 }
+#endif
 
 inline int generateMove(const BoardState& boardIn,Move moveList[],Color turn){
 #ifdef _WARNING_MESSAGE_
