@@ -9,35 +9,88 @@
 typedef uint64_t KeyType;
 #define HASH_VALUE_FILE "hash_value.cpp"
 
-class TransTable{
+struct TransData{
+	Score score;
+	int8_t depth;
+	uint8_t flag;
+	static const uint8_t no		= 0b0000;
+	static const uint8_t exact	= 0b0001;
+	static const uint8_t upper	= 0b0010;
+	static const uint8_t lower	= 0b0011;
+	inline struct TransData& operator=(const struct TransData& dataIn){
+		score=dataIn.score;
+		depth=dataIn.depth;
+		flag=dataIn.flag;
+	};
+};
+
+template<class DataType>class HashTable{
 public:
 	static const int MAX_TABLE_SIZE_BIT=20;
 	struct Value{
 		KeyType key;
-		struct Data{
-			int16_t score;
-			int8_t depth;
-			uint8_t flag;
-			static const uint8_t no		= 0b0000;
-			static const uint8_t exact	= 0b0001;
-			static const uint8_t upper	= 0b0010;
-			static const uint8_t lower	= 0b0011;
-		}data;
+		DataType data;
 	}*table;
 
 	const int sizeBit;
 	const KeyType modMask;
 
-	inline TransTable(int tableSizeBitIn=MAX_TABLE_SIZE_BIT);
-	inline ~TransTable();
-	static inline void countHashValue(KeyType chessPosH[],KeyType colorH[]);
-	static inline int writeHashValueDefineFile(const std::string& pathIn);
+	inline HashTable(int tableSizeBitIn=MAX_TABLE_SIZE_BIT);
+	inline ~HashTable();
 
 	inline void init(struct Value& valueIn)const;
 	inline void clear();
 
+	inline int isHit(KeyType keyIn,DataType** dataOut);
+	inline void update(KeyType keyIn,const DataType& dataIn);
+};
+
+template<class DataType>
+inline void HashTable<DataType>::update(KeyType keyIn,const DataType& dataIn){
+	table[keyIn&modMask].data=dataIn;
+	table[keyIn&modMask].key=keyIn;
+}
+
+
+template<class DataType>
+inline int HashTable<DataType>::isHit(KeyType keyIn,DataType** dataOut){
+	if(table[keyIn&modMask].key!=keyIn)return 0;
+	(*dataOut)=&(table[keyIn&modMask].data);
+	return 1;
+}
+
+template<class DataType>
+inline HashTable<DataType>::HashTable(int tableSizeBitIn):table(nullptr),sizeBit(tableSizeBitIn),
+  modMask(~((~0)<<tableSizeBitIn)){
+	table=new struct Value[(1<<tableSizeBitIn)];
+	clear();
+}
+
+template<class DataType>
+inline HashTable<DataType>::~HashTable(){
+	delete table;
+}
+
+template<class DataType>
+inline void HashTable<DataType>::init(struct Value& valueIn)const{
+	valueIn.data.flag=valueIn.data.no;
+}
+
+template<class DataType>
+inline void HashTable<DataType>::clear(){
+	for(int i=0;i<(1<<sizeBit);i++)init(table[i]);
+}
+
+class TransTable:public HashTable<struct TransData>{
+public:
 	static const KeyType chessPosToHash[16*64];
 	static const KeyType colorToHash[2];
+
+	static inline void countHashValue(KeyType chessPosH[],KeyType colorH[]);
+	static inline int writeHashValueDefineFile(const std::string& pathIn);
+
+	inline TransTable(int tableSizeBitIn=HashTable::MAX_TABLE_SIZE_BIT);
+	inline ~TransTable();
 
 	static inline KeyType hash(int posIn,Chess chessIn);
 	static inline KeyType hash(Color colorIn);
@@ -47,36 +100,18 @@ public:
 	static inline KeyType flipColor(KeyType keyIn);
 	static inline KeyType removeChess(KeyType keyIn,int posIn,Chess chessIn);
 	static inline KeyType addChess(KeyType keyIn,int posIn,Chess chessIn);
-
-	inline int isHit(KeyType keyIn,struct TransTable::Value::Data** dataOut);
-	inline void update(KeyType keyIn,int valueIn,int flagIn,uint8_t depthIn);
 };
 
 inline KeyType TransTable::addChess(KeyType keyIn,int posIn,Chess chessIn){
-	//return hash(hash(keyIn,hash(posIn,chessNum::dark)),hash(posIn,chessIn));
 	return hash(keyIn,hash(posIn,chessIn));
 }
 
 inline KeyType TransTable::removeChess(KeyType keyIn,int posIn,Chess chessIn){
-	//return hash(hash(keyIn,hash(posIn,chessIn)),hash(posIn,chessNum::dark));
 	return hash(keyIn,hash(posIn,chessIn));
 }
 
 inline KeyType TransTable::flipColor(KeyType keyIn){
-	return hash(keyIn,hash(TransTable::colorToHash[chessColor::red],TransTable::colorToHash[chessColor::black]));
-}
-
-inline void TransTable::update(KeyType keyIn,int scoreIn,int flagIn,uint8_t depthIn){
-	table[keyIn&modMask].data.flag=flagIn;
-	table[keyIn&modMask].data.score=scoreIn;
-	table[keyIn&modMask].data.depth=depthIn;
-	table[keyIn&modMask].key=keyIn;
-}
-
-inline int TransTable::isHit(KeyType keyIn,struct TransTable::Value::Data** dataOut){
-	if(table[keyIn&modMask].key!=keyIn)return 0;
-	(*dataOut)=&(table[keyIn&modMask].data);
-	return 1;
+	return hash(keyIn,hash(colorToHash[chessColor::red],colorToHash[chessColor::black]));
 }
 
 inline KeyType TransTable::hash(KeyType keyA,KeyType keyB){
@@ -99,14 +134,11 @@ inline KeyType TransTable::hash(int posIn,Chess chessIn){
 	return chessPosToHash[(posIn<<5)|(int)chessIn];
 }
 
-inline TransTable::TransTable(int tableSizeBitIn):table(nullptr),sizeBit(tableSizeBitIn),
-  modMask(~((~0)<<tableSizeBitIn)){
-	table=new struct Value[(1<<tableSizeBitIn)];
-	clear();
+inline TransTable::TransTable(int tableSizeBitIn):HashTable(tableSizeBitIn){
+
 }
 
 inline TransTable::~TransTable(){
-	delete table;
 }
 
 inline void TransTable::countHashValue(KeyType chessPosH[],KeyType colorH[]){
@@ -115,7 +147,6 @@ inline void TransTable::countHashValue(KeyType chessPosH[],KeyType colorH[]){
 		chessPosH[i]=(KeyType)hashGenerator(std::to_string(i));
 	for(int i=0;i<2;i++)
 		colorH[i]=(KeyType)hashGenerator(std::to_string(16*64+i));
-	//for(int i=0;i<32;i++)std::cout<<"chessPosToHash["<<i<<"]=\t\""<<chessPosToHash[i]<<"\""<<std::endl;
 }
 
 inline int TransTable::writeHashValueDefineFile(const std::string& pathIn){
@@ -163,6 +194,7 @@ inline int TransTable::writeHashValueDefineFile(const std::string& pathIn){
 		strWrt+="U";
 		if(i!=1)strWrt+=", ";
 	}
+
 	strWrt+="};\n#endif\n";
 
 	std::ofstream out_file;
@@ -179,20 +211,12 @@ inline int TransTable::writeHashValueDefineFile(const std::string& pathIn){
 
 	out_file.close();
 
-	//std::cout<<"file>>"<<std::endl<<strWrt;
 	return 1;
 }
 
-inline void TransTable::init(struct Value& valueIn)const{
-	valueIn.data.flag=valueIn.data.no;
-}
-
-inline void TransTable::clear(){
-	for(int i=0;i<(1<<sizeBit);i++)init(table[i]);
-}
-
 #ifdef _PRE_PROCESS_
-const KeyType chessPosToHash[16*64]={0};
-const KeyType colorToHash[2]={0};
+const KeyType TransTable::chessPosToHash[16*64]={0};
+const KeyType TransTable::colorToHash[2]={0};
 #endif
+
 #endif

@@ -8,5 +8,8 @@ class AI{
 public:
 	BoardState state;
 	TransTable transTable;
+
+public:
+	AI(int tableSizeBitIn=20);
 };
 #endif

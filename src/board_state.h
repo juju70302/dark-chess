@@ -57,6 +57,7 @@ public:
 	Chess board[CHESS_NUM];
 	int closedChess[2*8];
 	int movableNum[2];
+	int closedNum[2];
 	Chess movableList[2*8];
 	static const int goNextPos[4*32];
 #ifdef _USING_TRANS_TABLE_
@@ -145,8 +146,10 @@ inline int BoardState::canMove(int dir,int currentPos,int moveTypeIn,int& nextPo
 //currentPos must between chessPos::min to chessPos::max... 
 	if(moveTypeIn==moveType::go)//go
 		return canGo(dir,currentPos,nextPos,nextChess);
-	else if(moveTypeIn==moveType::flip)//flip
+	else if(moveTypeIn==moveType::flip){//flip
+		nextPos=currentPos;
 		return (board[currentPos]==chessNum::dark)?1:0;
+	}
 	//jump..
 	return canJump(dir,currentPos,nextPos,nextChess);
 }
@@ -213,7 +216,8 @@ inline void BoardState::unMove(int currentPos,int prevPos,Chess prevChess){
 		hashValue=TransTable::addChess(hashValue,currentPos,chessNum::dark);
 #endif
 		removeFromPieceList(currentPos);
-		closedChess[(colorWithoutCheck(board[currentPos])<<3)|type(board[currentPos])]++;
+		closedChess[board[currentPos]]++;
+		closedNum[colorWithoutCheck(board[currentPos])]++;
 		movableList[board[currentPos]]--;
 		board[currentPos]=chessNum::dark;
 		return;
@@ -239,7 +243,7 @@ inline void BoardState::moveWithoutCheck(const struct Move& moveIn){
 	if(moveIn.type==moveType::go)
 		goWithoutCheck(moveIn.dir,moveIn.currentPos);
 	else if(moveIn.type==moveType::flip)
-		flipChessWithoutCheck(moveIn.currentPos,moveIn.nextPos);
+		flipChessWithoutCheck(moveIn.currentPos,moveIn.nextChess);
 	else//jump
 		jumpWithoutCheck(moveIn.dir,moveIn.currentPos);
 }
@@ -287,6 +291,7 @@ inline void BoardState::flipChessWithoutCheck(int posIn,Chess appearChess){
 #endif
 	board[posIn]=appearChess;
 	closedChess[appearChess]--;
+	closedNum[colorWithoutCheck(appearChess)]--;
 	movableList[appearChess]++;
 	addToPieceList(posIn,appearChess);
 }
@@ -322,9 +327,9 @@ inline int BoardState::type(Chess chessIn){
 }
 
 inline int BoardState::isOver()const{
-	if((movableNum[(int)chessColor::red]==0)&&(closedChess[(int)chessColor::red]==0))
+	if((movableNum[(int)chessColor::red]==0)&&(closedNum[(int)chessColor::red]==0))
 		return 1;
-	if((movableNum[(int)chessColor::black]==0)&&(closedChess[(int)chessColor::black]==0))
+	if((movableNum[(int)chessColor::black]==0)&&(closedNum[(int)chessColor::black]==0))
 		return 1;
 	return 0;
 }

@@ -10,7 +10,9 @@
 #define BOARD_WIDTH 4
 #define CHESS_NUM BOARD_LENGTH*BOARD_WIDTH
 #define PIECE_NUM 7
+
 typedef int Color;
+typedef float Score;
 typedef unsigned int Chess;
 
 namespace chessNum{

@@ -37,7 +37,7 @@ void testTrabsTable(){
 		0,0,0,0,0,0,0
 	};
 	AI ai1;
-	TransTable tt;
+	//TransTable<struct TransData> tt;
 
 	ai1.state.init(bdIn1,closed1,1,chessColor::red);
 
@@ -105,13 +105,13 @@ void testTrabsTable(){
 void testGenerate(){
 	char bdIn[32]={
 		'-','-','-','-','-','-','-','-',
-		'K','-','-','-','-','-','-','-',
+		'-','-','X','X','X','-','-','-',
 		'-','-','-','-','-','-','-','-',
-		'g','-','P','-','-','-','-','-'
+		'-','-','-','-','-','-','-','-'
 	};
 	int closed[]={
-		0,0,0,0,0,0,0,
-		0,0,0,0,0,0,0
+		0,0,0,0,2,0,0,
+		0,0,0,1,0,0,0
 	};
 
 	AI ai;
@@ -120,13 +120,15 @@ void testGenerate(){
 
 	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
 
-	struct Move mList[200];
-	int mNum=generateMove(ai.state,mList,chessColor::red);
+	struct Move mList[2000];
+	int order[2000];
+	int mNum=generateMove(ai.state,mList,chessColor::red,order);
 	cout<<endl<<"move num=\""<<mNum<<"\""<<endl;
 	for(int i=0;i<mNum;i++)cout<<mList[i].toString()<<endl;cout<<endl;
 
 #ifdef _USING_TRANS_TABLE_
-	int point=negaScout(ai.state,ai.transTable,-100,100,20);
+	//int point=negaScout(ai.state,ai.transTable,(Score)-100,(Score)100.0,15);
+	float point=chanceNodeSearch(ai.state,ai.transTable,10,(Score)-100,(Score)100,1);
 #else
 	int point=negaScout(ai.state,-100,100,15);
 #endif
@@ -146,6 +148,8 @@ void testGenerate(){
 	//cout<<"flip turn=\""<<g1.myTurn<<"\""<<endl;
 	//g1.flipTurn();
 	//cout<<"flip turn twice=\""<<g1.myTurn<<"\""<<endl;
+
+	//TransTable tt;
 }
 
 void testEvaluate(){
@@ -189,11 +193,11 @@ void testMove(){
 	if(g.isValid())cout<<"board is valid..."<<endl;
 	else cout<<"board illegal!!!"<<endl;
 
-	cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
+	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
 
 	g.flipChessWithoutCheck(1,chessNum::black::guard);
 	cout<<endl<<"after flip>>"<<endl;g.print();
-	cout<<"pieceList>>"<<endl;g.printPieceList();
+	//cout<<"pieceList>>"<<endl;g.printPieceList();
 /*
 	g.unMove(1,1,chessNum::dark);
 	cout<<endl<<"after unmove>>"<<endl;g.print();
@@ -201,8 +205,9 @@ void testMove(){
 //*/
 ///*
 	Move m;
-	m.currentPos=0;m.dir=chessDirection::down;
-	m.type=moveType::go;
+	m.currentPos=9;m.dir=chessDirection::down;
+	m.type=moveType::flip;
+	m.nextChess=chessNum::black::guard;
 	cout<<endl;
 	if(g.canMove(m.dir,m.currentPos,m.type,m.nextPos,m.nextChess))
 		cout<<"can move\""<<BoardState::intToChar(g.board[m.currentPos])<<"\""<<endl;
@@ -212,11 +217,11 @@ void testMove(){
 	//g.jumpWithoutCheck(m.dir,m.currentPos,m.nextPos,m.nextChess);
 	g.moveWithoutCheck(m);
 	cout<<endl<<"after move>>"<<endl;g.print();
-	cout<<"pieceList>>"<<endl;g.printPieceList();
+	//cout<<"pieceList>>"<<endl;g.printPieceList();
 ///*
 	g.unMove(m);
 	cout<<endl<<"after unmove>>"<<endl;g.print();
-	cout<<"pieceList>>"<<endl;g.printPieceList();
+	//cout<<"pieceList>>"<<endl;g.printPieceList();
 /*
 	g.unMove(1,1,chessNum::dark);
 	cout<<endl<<"after unmove>>"<<endl;g.print();

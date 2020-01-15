@@ -4,7 +4,7 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 	myColor=myColorIn;
 	myTurn=(myFirstIn==0)?0:1;
 	//for(int i=0;i<2*16;i++)pieceList[i].live=0;
-	movableNum[0]=0;movableNum[1]=0;
+	movableNum[0]=0;movableNum[1]=0;closedNum[0]=0;closedNum[1]=0;
 	for(int i=0;i<2;i++)for(int j=0;j<7;j++)movableList[(i<<3)|j]=0;
 	for(int i=0;i<CHESS_NUM;i++){
 		board[i]=(Chess)charToInt(bdIn[i]);
@@ -20,9 +20,12 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 		else
 			pieceListIndex[i]=chessPos::illegal;
 	}
-	for(int i=0;i<2;i++)
-		for(int j=0;j<PIECE_NUM;j++)
+	for(int i=0;i<2;i++){
+		for(int j=0;j<PIECE_NUM;j++){
 			closedChess[(i<<3)|j]=closedChessIn[i*PIECE_NUM+j];
+			closedNum[i]+=closedChess[(i<<3)|j];
+		}
+	}
 #ifdef _USING_TRANS_TABLE_
 	if((myColor==chessColor::red)||(myColor==chessColor::black))
 		hashValue=TransTable::hash(TransTable::hash((myTurn)?myColor:flipColor(myColor)),
@@ -33,19 +36,19 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 int BoardState::isValid()const{
 	for(int i=0;i<CHESS_NUM;i++)if(board[i]>15)return 0;
 
-	int pieceCount[2*PIECE_NUM],closedNum=0;
+	int pieceCount[2*PIECE_NUM],closedNumTmp=0;
 	for(int i=0;i<2;i++){
 		for(int j=0;j<PIECE_NUM;j++){
 			pieceCount[(i<<3)|j]=closedChess[(i<<3)|j];
-			closedNum+=closedChess[(i<<3)|j];
+			closedNumTmp+=closedChess[(i<<3)|j];
 		}
 	}
 	for(int i=0;i<CHESS_NUM;i++){
 		if(isMovable(board[i]))
 			pieceCount[(int)board[i]]++;
-		else if(board[i]==chessNum::dark)closedNum--;
+		else if(board[i]==chessNum::dark)closedNumTmp--;
 	}
-	if(closedNum!=0)return 0;
+	if(closedNumTmp!=0)return 0;
 	for(int i=0;i<2;i++){
 		if(pieceCount[(i<<3)|chessNum::red::king]>1)return 0;
 		if(pieceCount[(i<<3)|chessNum::red::pawn]>5)return 0;
@@ -91,10 +94,10 @@ void BoardState::print()const{
 		for(int j=0;j<BOARD_LENGTH;j++)
 			std::cout<<intToChar((int)board[i*BOARD_LENGTH+j]);
 		int remainNum=0;
-		for(int j=0;j<PIECE_NUM;j++)remainNum+=closedChess[(i-2)*8+j];
+		//for(int j=0;j<PIECE_NUM;j++)remainNum+=closedChess[(i-2)*8+j];
 		if(i==2)std::cout<<"\tred\tO: ";
 		else std::cout<<"\tblack\tO: ";
-		std::cout<<movableNum[i-2]<<"  X: "<<remainNum<<std::endl;
+		std::cout<<movableNum[i-2]<<"  X: "<<closedNum[i-2]<<std::endl;
 	}
 	std::cout<<"my color>> ";
 	if(myColor==chessColor::red)std::cout<<"r";
