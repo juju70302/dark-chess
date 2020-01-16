@@ -13,15 +13,84 @@ void testMove();
 void testEvaluate();
 void testGenerate();
 void testTrabsTable();
+void testAI();
 
 int main(){
 	init();
-	testGenerate();
+	testAI();
+	//testGenerate();
 	//testTrabsTable();
 	//testMove();
 	//testEvaluate();
 
 	return 0;
+}
+
+void testAI(){
+	char bdIn[32]={
+		'X','X','X','X','X','X','X','X',
+		'X','X','X','X','X','X','X','X',
+		'X','X','X','X','X','X','X','X',
+		'X','X','X','X','X','X','X','X'
+	};
+	int closed[]={
+		1,2,2,2,2,2,5,
+		1,2,2,2,2,2,5
+	};
+
+	AI ai;
+	ai.state.init(bdIn,closed,0,chessColor::unknown);
+	cout<<"original board>>"<<endl<<endl;ai.state.print();
+
+	struct Move firstMove,secondMove,thirdMove;
+	ai.startGameMove(firstMove);
+	firstMove.nextChess=chessNum::red::knight;
+	if(ai.move(firstMove))cout<<"first move >>\t"<<firstMove.toString()<<endl;
+	else cout<<"Error to first move >>\t"<<firstMove.toString()<<endl;
+
+	cout<<endl<<"myTurn1=\""<<ai.state.myTurn<<endl<<endl;
+
+	cout<<endl<<"board>>"<<endl;ai.state.print();cout<<endl;
+
+	ai.startGameMove(secondMove);
+	secondMove.nextChess=chessNum::black::pawn;
+	if(ai.move(secondMove))cout<<"second move >>\t"<<secondMove.toString()<<endl;
+	else cout<<"Error to second move >>\t"<<secondMove.toString()<<endl;
+
+	cout<<endl<<"board>>"<<endl;ai.state.print();cout<<endl;
+
+	cout<<endl<<"myTurn2=\""<<ai.state.myTurn<<endl<<endl;
+
+
+	thirdMove.type=moveType::go;thirdMove.currentPos=3;thirdMove.nextPos=11;
+	thirdMove.currentChess=ai.state.board[thirdMove.currentPos];
+	thirdMove.nextChess=ai.state.board[thirdMove.nextPos];
+	thirdMove.dir=chessDirection::down;
+	//ai.state.moveWithoutCheck(thirdMove);
+	//ai.state.flipTurn();
+	//ai.state.flipTurn();
+///*
+	cout<<endl<<"board>>"<<endl;ai.state.print();cout<<endl;
+
+	//static const Score infMaxScore=(Score)10000000;
+	//negaScout2(ai.state,ai.transTable,-1*infMaxScore,infMaxScore,3);
+	//ai.state.flipTurn();
+	//ai.state.unMove(thirdMove);
+
+	//ai.completeSearchMove(thirdMove,1500);
+	//ai.noFlipSearchMove(thirdMove,1500);
+	cout<<"move num=\""<<noFlipMoveNum(ai.state)<<"\""<<endl;
+
+	ai.moveGenerator(thirdMove);
+
+	cout<<"third move >>\t"<<thirdMove.toString()<<endl;
+	char m0,m1;int pos1=31;ai.positionChange(m0,m1,pos1);
+	cout<<"pos \""<<pos1<<"\" into \""<<m0<<m1<<"\""<<endl;
+	m0='b',m1='1';
+	ai.positionChange(pos1,m0,m1);
+	cout<<"char \""<<m0<<m1<<"\" into pos \""<<pos1<<"\""<<endl;
+	//cout<<"choose \""<<ai.chooseFlip()<<"\" to flip...\n";
+//*/
 }
 
 void testTrabsTable(){
@@ -103,53 +172,47 @@ void testTrabsTable(){
 }
 
 void testGenerate(){
+
 	char bdIn[32]={
-		'-','-','-','-','-','-','-','-',
-		'-','-','X','X','X','-','-','-',
-		'-','-','-','-','-','-','-','-',
-		'-','-','-','-','-','-','-','-'
+		'-','-','-','c','-','-','-','-',
+		'-','k','X','K','g','p','-','-',
+		'-','-','X','X','-','-','-','-',
+		'-','-','-','c','-','-','-','-'
 	};
 	int closed[]={
-		0,0,0,0,2,0,0,
-		0,0,0,1,0,0,0
+		0,0,0,0,0,0,0,
+		0,0,0,0,0,0,3
 	};
+
 
 	AI ai;
 	ai.state.init(bdIn,closed,1,chessColor::red);
 	cout<<"original board>>"<<endl<<endl;ai.state.print();
 
-	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
+	cout<<endl<<"pieceList>>"<<endl;ai.state.printPieceList();
 
 	struct Move mList[2000];
 	int order[2000];
 	int mNum=generateMove(ai.state,mList,chessColor::red,order);
 	cout<<endl<<"move num=\""<<mNum<<"\""<<endl;
-	for(int i=0;i<mNum;i++)cout<<mList[i].toString()<<endl;cout<<endl;
+	//for(int i=0;i<mNum;i++)cout<<mList[order[i]].toString()<<endl;cout<<endl;
 
 #ifdef _USING_TRANS_TABLE_
 	//int point=negaScout(ai.state,ai.transTable,(Score)-100,(Score)100.0,15);
-	float point=chanceNodeSearch(ai.state,ai.transTable,10,(Score)-100,(Score)100,1);
+
+	//float point=chanceNodeSearch(ai.state,ai.transTable,10,(Score)-100,(Score)100,3);
+	float point=negaScout1(ai.state,ai.transTable,-1*10000,10000,6);
 #else
-	int point=negaScout(ai.state,-100,100,15);
+	//int point=negaScout(ai.state,-100,100,15);
 #endif
 	cout<<"count point=\""<<point<<"\""<<endl<<endl;
+	cout<<"choose \""<<ai.chooseFlip()<<"\" to flip...\n";
 
-	//cout<<"after movement's board>>"<<endl<<endl;g.print();
-	//cout<<endl<<"pieceList>>"<<endl;g.printPieceList();
+	//Chess redL,blackL;
+	//ai.state.largestChess(redL,blackL);
+	//cout<<"red largest = \""<<BoardState::intToChar(redL)<<"\""<<endl;
+	//cout<<"black largest = \""<<BoardState::intToChar(blackL)<<"\""<<endl;
 
-	//cout<<"flip red=\""<<BoardState::flipColor(chessColor::red)<<"\""<<endl;
-	//cout<<"flip red twice=\""<<BoardState::flipColor(BoardState::flipColor(chessColor::red))<<"\""<<endl;
-	//cout<<"flip black=\""<<BoardState::flipColor(chessColor::black)<<"\""<<endl;
-	//cout<<"flip black twice=\""<<BoardState::flipColor(BoardState::flipColor(chessColor::black))<<"\""<<endl;
-
-	//BoardState g1;g1.init(bdIn,closed,1,chessColor::black);
-	//cout<<"turn=\""<<g1.myTurn<<"\""<<endl;
-	//g1.flipTurn();
-	//cout<<"flip turn=\""<<g1.myTurn<<"\""<<endl;
-	//g1.flipTurn();
-	//cout<<"flip turn twice=\""<<g1.myTurn<<"\""<<endl;
-
-	//TransTable tt;
 }
 
 void testEvaluate(){

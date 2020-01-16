@@ -27,9 +27,11 @@ inline Score evaluatingFunction(const BoardState& boardIn);
 inline Score materialValues(const BoardState& boardIn);
 inline Score openMaterialValues(const BoardState& boardIn,const Score materialValueTable[16]);
 inline Score closedMaterialValues(const BoardState& boardIn,const Score materialValueTable[16]);
-inline int generateMoveWithoutFlip(const BoardState& boardIn,Move moveList[],Color turn,int order[]);
-inline int generateMove(const BoardState& boardIn,Move moveList[],Color turn,int order[]);
-inline int generateFlip(const BoardState& boardIn,Move moveList[]);
+inline int generateMoveWithoutFlip(BoardState& boardIn,Move moveList[],Color turn,int order[]);
+inline int generateMove(BoardState& boardIn,Move moveList[],Color turn,int order[]);
+inline int generateFlip(BoardState& boardIn,Move moveList[]);
+inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],int moveNum);
+inline int noFlipMoveNum(const BoardState& boardIn,Color colorIn);
 
 #ifdef _USING_TRANS_TABLE_
 inline float chanceNodeSearch(BoardState& boardIn,TransTable& transTableIn,int posIn,Score alpha,Score beta,int depth);
@@ -38,6 +40,80 @@ inline float chanceNodeSearch(BoardState& boardIn,int posIn,Score alpha,Score be
 #endif
 
 //------------------------------defining funcion----------------------------------------
+inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],int moveNum){
+#ifdef _USING_MOVE_ORDERING_
+	Chess ourLarge,emyLarge;Color clr=(boardIn.myTurn)?boardIn.myColor:boardIn.flipColor(boardIn.myColor);
+	if(clr==chessColor::red)boardIn.largestChess(ourLarge,emyLarge);
+	else boardIn.largestChess(emyLarge,ourLarge);
+
+	int orderNum=0,recorded[Move::maxBranch+1];
+	for(int i=0;i<moveNum;i++)recorded[i]=0;
+
+
+	//run our largest chess...
+	int needRunLarge=0;
+	for(int i=0;i<moveNum&&needRunLarge==0;i++){
+		if(moveList[i].currentChess==ourLarge){
+			needRunLarge=boardIn.isDangerous(moveList[i].currentPos);
+		}
+	}
+	if(needRunLarge){
+//std::cout<<"need run!!\n";
+		for(int i=0;i<moveNum;i++){
+			if(moveList[i].currentChess==ourLarge){
+				order[orderNum]=i;
+				recorded[i]=1;
+				orderNum++;
+			}
+		}
+	}
+	//else std::cout<<"king is safe...\n";
+
+	for(int i=0;i<moveNum;i++){//Eating enemy's king...
+		if(recorded[i]||moveList[i].type==moveType::flip)continue;
+		if(moveList[i].nextChess==emyLarge){
+//std::cout<<"move \'"<<moveList[i].toString()<<"\" can capture enemy's king"<<std::endl;
+			order[orderNum++]=i;
+			recorded[i]=1;
+		}
+	}
+
+	for(int i=0;i<moveNum;i++){//Capturing being eaten...
+		if(recorded[i]||moveList[i].type==moveType::flip)continue;
+		if(boardIn.isDangerous(moveList[i].currentPos)){
+//std::cout<<"move \'"<<moveList[i].toString()<<"\" to run \""<<boardIn.intToChar(moveList[i].currentChess)<<"\""<<std::endl;
+			order[orderNum++]=i;
+			recorded[i]=1;
+		}
+	}
+
+	for(int i=0;i<moveNum;i++){//Eating enemy's chess...
+		if(recorded[i]||moveList[i].type==moveType::flip)continue;
+		if(boardIn.isMovable(moveList[i].nextChess)){
+//std::cout<<"move \'"<<moveList[i].toString()<<"\" can eat enemy..."<<std::endl;
+			order[orderNum++]=i;
+			recorded[i]=1;
+		}
+	}
+
+	for(int i=0;i<moveNum;i++){//ecept flip...
+		if(recorded[i]||moveList[i].type==moveType::flip)continue;
+		order[orderNum++]=i;
+		recorded[i]=1;
+	}
+
+	for(int i=0;i<moveNum;i++){//remain flip...
+		if(recorded[i])continue;
+		order[orderNum++]=i;
+		recorded[i]=1;
+	}
+//std::cout<<"orderNum="<<orderNum<<std::endl;
+	return 1;
+#else
+	for(int i=0;i<moveNum;i++)order[i]=i;
+#endif
+}
+
 #ifdef _USING_TRANS_TABLE_
 inline Score negaScout2(BoardState& boardIn,TransTable& transTableIn,Score alpha,Score beta,int depth)
 #else
@@ -46,8 +122,8 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 {
 	//terminal consition
 	if(depth==0||boardIn.isOver()){
-std::cout<<std::endl<<"score=\""<<evaluatingFunction(boardIn)<<"\"\tdepth=\""<<depth<<"\""<<std::endl;
-std::cout<<"board>>"<<std::endl;boardIn.print();
+//std::cout<<std::endl<<"score=\""<<evaluatingFunction(boardIn)<<"\"\tdepth=\""<<depth<<"\""<<std::endl;
+//std::cout<<"board>>"<<std::endl;boardIn.print();
 		return evaluatingFunction(boardIn);
 	}
 
@@ -95,12 +171,21 @@ std::cout<<"board>>"<<std::endl;boardIn.print();
 	m=std::max(((Score)-1)*inf,m);	//the current lower bound; fail soft
 	n=beta;		//the current upper bound
 	for(int moveIndex=0;moveIndex<moveNum;moveIndex++){
+
+//if(depth==3)std::cout<<"flag1\n";
+
+
 		if(moveList[order[moveIndex]].type==moveType::flip){//flip
 #ifdef _USING_TRANS_TABLE_
-			scoutT=chanceNodeSearch(boardIn,transTableIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
+			scoutT=chanceNodeSearch(boardIn,transTableIn,moveList[order[moveIndex]].currentPos,std::max(alpha,m),beta,depth);
+			//scoutT=chanceNodeSearch(boardIn,transTableIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
 #else
-			scoutT=chanceNodeSearch(boardIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
+			scoutT=chanceNodeSearch(boardIn,moveList[order[moveIndex]].currentPos,std::max(alpha,m),beta,depth);
+			//scoutT=chanceNodeSearch(boardIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
 #endif
+			if(scoutT>m){
+				m=scoutT;
+			}
 		}
 		else{
 
@@ -115,29 +200,53 @@ std::cout<<"board>>"<<std::endl;boardIn.print();
 #endif
 			//reset to original position...
 			boardIn.flipTurn();
-			boardIn.unMove(moveList[moveIndex]);
-		}
-
-//std::cout<<std::endl;for(int i=0;i<(2-depth);i++)std::cout<<"  ";
-//std::cout<<"score=\""<<scoutT<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
-
+			boardIn.unMove(moveList[order[moveIndex]]);
 			if(scoutT>m){
+
+//if(depth==3)std::cout<<"\tflag2-1\n";
+
+
 				if((n == beta)||(depth < 3)||(scoutT >= beta))
 					m=scoutT;
 				else{//re-search...
+
+//if(depth==3){
+	//std::cout<<"\t\tflag2-1-1\n";
+	//std::cout<<"position>>"<<std::endl;boardIn.print();
+	//std::cout<<std::endl<<"move = \""<<moveList[order[moveIndex]].toString()<<"\"\n";
+	//std::cout<<
+//}
+
+
 					boardIn.moveWithoutCheck(moveList[order[moveIndex]]);
 					boardIn.flipTurn();
+
+//if(depth==3)std::cout<<"\t\tflag2-1-2\n";
+
+
 #ifdef _USING_TRANS_TABLE_
 					m=-1*negaScout2(boardIn,transTableIn,-1*beta,-1*scoutT,depth-1);
 #else
 					m=-1*negaScout2(boardIn,-1*beta,-1*scoutT,depth-1);
 #endif
+
+//if(depth==3)std::cout<<"\t\tflag2-1-3\n";
+
+
 					//reset to original position...
 					boardIn.flipTurn();
-					boardIn.unMove(moveList[moveIndex]);
+					boardIn.unMove(moveList[order[moveIndex]]);
+
+//if(depth==3)std::cout<<"\t\tflag2-1-4\n";
+
+
 				}
+
+//if(depth==3)std::cout<<"\tflag2-2\n";
+
+
 			}
+		}
 
 		//cut-off
 		if(m>=beta){
@@ -154,10 +263,10 @@ std::cout<<"board>>"<<std::endl;boardIn.print();
 #endif
 			return m;
 		}
-
 		//set up a null window
 		n=std::max(alpha,m)+1;
 	}
+
 #ifdef _USING_TRANS_TABLE_
 	if(m>alpha){
 		if((!hitResult)||(hashValue->depth < depth)||((hashValue->depth == depth)&&
@@ -288,7 +397,7 @@ inline Score negaScout1(BoardState& boardIn,Score alpha,Score beta,int depth)
 
 		//reset to original position...
 		boardIn.flipTurn();
-		boardIn.unMove(moveList[moveIndex]);
+		boardIn.unMove(moveList[order[moveIndex]]);
 	}
 #ifdef _USING_TRANS_TABLE_
 	if(m>alpha){
@@ -327,7 +436,7 @@ inline float chanceNodeSearch(BoardState& boardIn,int posIn,Score alpha,Score be
 	Score thisScore;
 
 	for(int i=0;i<2;i++)for(int j=0;j<PIECE_NUM;j++)totalClosed+=boardIn.closedChess[(i<<3)|j];
-std::cout<<"total closed chess = \""<<totalClosed<<"\""<<std::endl;
+//std::cout<<"total closed chess = \""<<totalClosed<<"\""<<std::endl;
 	for(int i=0;i<2;i++){
 		for(int j=0;j<PIECE_NUM;j++){
 			if(boardIn.closedChess[(i<<3)|j]==0)continue;
@@ -342,7 +451,7 @@ std::cout<<"total closed chess = \""<<totalClosed<<"\""<<std::endl;
 #else
 			thisScore=-1.0*negaScout(boardIn,Score alpha,Score beta,depth-1);
 #endif
-std::cout<<"this score = \""<<thisScore<<"\""<<std::endl;
+//std::cout<<"this score = \""<<thisScore<<"\""<<std::endl;
 			boardIn.flipTurn();
 			boardIn.unMove(m);
 			vSum+=(prob*((float)thisScore));
@@ -351,56 +460,37 @@ std::cout<<"this score = \""<<thisScore<<"\""<<std::endl;
 	return vSum;
 }
 
-inline int generateMove(const BoardState& boardIn,Move moveList[],Color turn,int order[]){
-	#ifdef _WARNING_MESSAGE_
-	if((turn!=chessColor::red)&&(turn!=chessColor::black)){
-		std::cout<<"Warning:generateMoveWithoutFlip(BoardState&,BoardState::Move[],Color)>>input turn is unknown..."<<std::endl;
-		std::cout<<"turn=\""<<turn<<"\""<<std::endl;
-	}
-#endif
-
+inline int noFlipMoveNum(const BoardState& boardIn){
+	Color colorIn=(boardIn.myTurn)?boardIn.myColor:BoardState::flipColor(boardIn.myColor);
 	int moveNum=0;
-	//Move thisMove;
+	int currentPos,nextPos;
+	Chess currentChess,nextChess;
 
 	//walk or jump move...
-	for(int i=0;i<boardIn.movableNum[(int)turn];i++){
+	for(int i=0;i<boardIn.movableNum[(int)colorIn];i++){
+		currentPos=boardIn.pieceList[((int)colorIn<<4)|i].where;
 		//go condition...
 		for(int dirChoose=chessDirection::min;dirChoose<=chessDirection::max;dirChoose++){
-			moveList[moveNum].currentPos=boardIn.pieceList[((int)turn<<4)|i].where;
-			if(boardIn.canGo(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
-				moveList[moveNum].dir=dirChoose;
-				moveList[moveNum].type=moveType::go;
+			currentPos=boardIn.pieceList[((int)colorIn<<4)|i].where;
+			if(boardIn.canGo(dirChoose,currentPos,nextPos,nextChess)){
 				moveNum++;
 			}
 		}
 
 		//jump condition...
-		if(BoardState::type(boardIn.pieceList[((int)turn<<4)|i].chess)==chessNum::cannon){
+		if(BoardState::type(boardIn.pieceList[((int)colorIn<<4)|i].chess)==chessNum::cannon){
 			for(int dirChoose=chessDirection::min;dirChoose<=chessDirection::max;dirChoose++){
-				moveList[moveNum].currentPos=boardIn.pieceList[((int)turn<<4)|i].where;
-				if(boardIn.canJump(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
-					moveList[moveNum].dir=dirChoose;
-					moveList[moveNum].type=moveType::jump;
+				currentPos=boardIn.pieceList[((int)colorIn<<4)|i].where;
+				if(boardIn.canJump(dirChoose,currentPos,nextPos,nextChess)){
 					moveNum++;
 				}
 			}
 		}
 	}
-
-	//flip...
-	for(int i=0;i<CHESS_NUM;i++){
-		if(boardIn.board[i]==chessNum::dark){
-			moveList[moveNum].type=moveType::flip;
-			moveList[moveNum].currentPos=i;
-			moveList[moveNum].nextPos=i;
-			moveNum++;
-		}
-	}
-	for(int i=0;i<moveNum;i++)order[i]=i;
 	return moveNum;
 }
 
-inline int generateMoveWithoutFlip(const BoardState& boardIn,Move moveList[],Color turn,int order[]){
+inline int generateMove(BoardState& boardIn,Move moveList[],Color turn,int order[]){
 #ifdef _WARNING_MESSAGE_
 	if((turn!=chessColor::red)&&(turn!=chessColor::black)){
 		std::cout<<"Warning:generateMoveWithoutFlip(BoardState&,BoardState::Move[],Color)>>input turn is unknown..."<<std::endl;
@@ -419,6 +509,7 @@ inline int generateMoveWithoutFlip(const BoardState& boardIn,Move moveList[],Col
 			if(boardIn.canGo(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
 				moveList[moveNum].dir=dirChoose;
 				moveList[moveNum].type=moveType::go;
+				moveList[moveNum].currentChess=boardIn.board[moveList[moveNum].currentPos];
 				moveNum++;
 			}
 		}
@@ -430,12 +521,67 @@ inline int generateMoveWithoutFlip(const BoardState& boardIn,Move moveList[],Col
 				if(boardIn.canJump(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
 					moveList[moveNum].dir=dirChoose;
 					moveList[moveNum].type=moveType::jump;
+					moveList[moveNum].currentChess=boardIn.board[moveList[moveNum].currentPos];
 					moveNum++;
 				}
 			}
 		}
 	}
-	for(int i=0;i<moveNum;i++)order[i]=i;
+
+	//flip...
+	for(int i=0;i<CHESS_NUM;i++){
+		if(boardIn.board[i]==chessNum::dark){
+			moveList[moveNum].type=moveType::flip;
+			moveList[moveNum].currentPos=i;
+			moveList[moveNum].nextPos=i;
+			moveList[moveNum].currentChess=chessNum::dark;
+			moveList[moveNum].dir=chessDirection::up;
+			moveNum++;
+		}
+	}
+	//for(int i=0;i<moveNum;i++)order[i]=i;
+	moveOrdering(boardIn,moveList,order,moveNum);
+	return moveNum;
+}
+
+inline int generateMoveWithoutFlip(BoardState& boardIn,Move moveList[],Color turn,int order[]){
+#ifdef _WARNING_MESSAGE_
+	if((turn!=chessColor::red)&&(turn!=chessColor::black)){
+		std::cout<<"Warning:generateMoveWithoutFlip(BoardState&,BoardState::Move[],Color)>>input turn is unknown..."<<std::endl;
+		std::cout<<"turn=\""<<turn<<"\""<<std::endl;
+	}
+#endif
+
+	int moveNum=0;
+	//Move thisMove;
+
+	//walk or jump move...
+	for(int i=0;i<boardIn.movableNum[(int)turn];i++){
+		//go condition...
+		for(int dirChoose=chessDirection::min;dirChoose<=chessDirection::max;dirChoose++){
+			moveList[moveNum].currentPos=boardIn.pieceList[((int)turn<<4)|i].where;
+			if(boardIn.canGo(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
+				moveList[moveNum].dir=dirChoose;
+				moveList[moveNum].type=moveType::go;
+				moveList[moveNum].currentChess=boardIn.board[moveList[moveNum].currentPos];
+				moveNum++;
+			}
+		}
+
+		//jump condition...
+		if(BoardState::type(boardIn.pieceList[((int)turn<<4)|i].chess)==chessNum::cannon){
+			for(int dirChoose=chessDirection::min;dirChoose<=chessDirection::max;dirChoose++){
+				moveList[moveNum].currentPos=boardIn.pieceList[((int)turn<<4)|i].where;
+				if(boardIn.canJump(dirChoose,moveList[moveNum].currentPos,moveList[moveNum].nextPos,moveList[moveNum].nextChess)){
+					moveList[moveNum].dir=dirChoose;
+					moveList[moveNum].type=moveType::jump;
+					moveList[moveNum].currentChess=boardIn.board[moveList[moveNum].currentPos];
+					moveNum++;
+				}
+			}
+		}
+	}
+	moveOrdering(boardIn,moveList,order,moveNum);
 	return moveNum;
 }
 
@@ -454,8 +600,8 @@ inline Score materialValues(const BoardState& boardIn){
 		material_value::rook_value,material_value::knight_value,material_value::cannon_value,
 		material_value::pawn_value,material_value::dark_value};
 
-	static const Score c1=(Score)1;
-	static const Score c2=(Score)0;
+	static const Score c1=(Score)2;
+	static const Score c2=(Score)1;
 
 	//dynamically caculate material values
 	//if red king alive,rising black pawn's value...

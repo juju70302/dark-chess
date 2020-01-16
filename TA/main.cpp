@@ -46,16 +46,11 @@ static bool (CDCagent::*functions[])(const char* [], char*) = {
   &CDCagent::showboard
 };
 
-void init();
-
 int main(){
   char read[1024], write[1024], output[1024], *token;
   const char *data[10];
   int id;
   bool isFailed;
-
-//my code...
-  init();
 
 // agent declared in agent.h
   CDCagent myai;
@@ -103,8 +98,4 @@ int main(){
   }while(id != QUIT);
 
   return 0;
-}
-
-void init(){
-  BoardState::countJumpTable();
 }

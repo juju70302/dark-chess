@@ -1,41 +1,40 @@
 ONum:=-O3
 CompilerVer:=-std=c++11
 CFlag:=
-mainFileName:=test
-exeFileName:=main
+mainFileName:=main
+exeFileName:=r08921116
 
-make: nopre
-	
 all: clean pre make
 	rm -rf *.o
-	./$(exeFileName)
-exe: make
+make: agent
+
+nopre: agent
+	
+exe:
 	./$(exeFileName)
 clean:
-	rm -rf *.o *.exe $(exeFileName)
+	rm -rf *.o *.exe $(exeFileName) src/hash_value.cpp
 
-
-pre: preprocess.o
+agent: src/agent.cpp board_state trans_table AI
+	g++ -std=c++17 -O2 src/$(mainFileName).cpp src/agent.cpp AI.o board_state.o hash_value.o -o $(exeFileName)
+pre: preprocess
 	g++ preprocess.o -o preprocess
 	./preprocess
 	rm -rf preprocess.o preprocess
-nopre: board_state.o trans_table.o AI.o Protocol.o ClientSocket.o MyAI.o main.o
-	g++ $(mainFileName).o Protocol.o AI.o MyAI.o ClientSocket.o board_state.o hash_value.o -o $(exeFileName)
+test: board_state trans_table AI test.o
+	g++ test.o AI.o board_state.o hash_value.o -o $(exeFileName)
 
-preprocess.o: src/preprocess.cpp
+
+preprocess: src/preprocess.cpp
 	rm -rf preprocess.o
 	g++ -c -D _PRE_PROCESS_ $(CFlag) $(ONum) $(CompilerVer) src/preprocess.cpp
-board_state.o: src/board_state.cpp
+board_state: src/board_state.cpp
 	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/board_state.cpp
-trans_table.o: src/hash_value.cpp
+trans_table: src/hash_value.cpp
 	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/hash_value.cpp
-AI.o: src/AI.cpp
+AI: src/AI.cpp
 	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/AI.cpp
-ClientSocket.o: src/ClientSocket.cpp
-	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/ClientSocket.cpp
-Protocol.o: src/Protocol.cpp
-	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/Protocol.cpp
-MyAI.o: src/MyAI.cpp
-	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/MyAI.cpp
+test.o: src/test.cpp
+	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/test.cpp
 main.o: src/$(mainFileName).cpp
 	g++ -c $(CFlag) $(ONum) $(CompilerVer) src/$(mainFileName).cpp

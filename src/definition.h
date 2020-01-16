@@ -1,8 +1,10 @@
 #include <iostream>
 #include <cstdio>
 
-#define _WARNING_MESSAGE_
 #define _USING_TRANS_TABLE_
+#define _USING_MOVE_ORDERING_
+//#define _WARNING_MESSAGE_
+//#define _INFORMATION_
 
 #ifndef _DEFINITION_H_
 #define _DEFINITION_H_
