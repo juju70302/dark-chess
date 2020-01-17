@@ -3,14 +3,14 @@
 void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColorIn){
 	myColor=myColorIn;
 	myTurn=(myFirstIn==0)?0:1;
-	//for(int i=0;i<2*16;i++)pieceList[i].live=0;
+
 	movableNum[0]=0;movableNum[1]=0;closedNum[0]=0;closedNum[1]=0;
 	for(int i=0;i<2;i++)for(int j=0;j<7;j++)movableList[(i<<3)|j]=0;
 	for(int i=0;i<CHESS_NUM;i++){
 		board[i]=(Chess)charToInt(bdIn[i]);
 		if(isMovable(board[i])){
 			int clr=(int)colorWithoutCheck(board[i]);
-			//pieceList[(clr<<4)|movableNum[clr]].live=1;
+
 			pieceList[(clr<<4)|movableNum[clr]].where=i;
 			pieceList[(clr<<4)|movableNum[clr]].chess=board[i];
 			pieceListIndex[i]=movableNum[clr];
@@ -36,7 +36,7 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 int BoardState::isValid()const{
 	for(int i=0;i<CHESS_NUM;i++)if(board[i]>15)return 0;
 
-	int pieceCount[2*PIECE_NUM],closedNumTmp=0;
+	int pieceCount[2*8],closedNumTmp=0;
 	for(int i=0;i<2;i++){
 		for(int j=0;j<PIECE_NUM;j++){
 			pieceCount[(i<<3)|j]=closedChess[(i<<3)|j];
@@ -93,8 +93,6 @@ void BoardState::print()const{
 	for(int i=2;i<BOARD_WIDTH;i++){
 		for(int j=0;j<BOARD_LENGTH;j++)
 			std::cout<<intToChar((int)board[i*BOARD_LENGTH+j]);
-		int remainNum=0;
-		//for(int j=0;j<PIECE_NUM;j++)remainNum+=closedChess[(i-2)*8+j];
 		if(i==2)std::cout<<"\tred\tO: ";
 		else std::cout<<"\tblack\tO: ";
 		std::cout<<movableNum[i-2]<<"  X: "<<closedNum[i-2]<<std::endl;
@@ -227,18 +225,17 @@ const int BoardState::goNextPos[]={
 
 void BoardState::countJumpTable(int validTable[]){
 	//0:empty 1:red 2:dark 3:black
-	static const int empty=0;	static const int red=1;
-	static const int dark=2;	static const int black=3;
+	//static const int empty=0;	static const int red=1;
+	//static const int dark=2;	static const int black=3;
 	static const int invalidPos=-1;
 
 	//validTable[dir][currentPos][1th chess]...[8th]
-	int ch[8],target,tmpPos,revC[8];
+	int ch[8],tmpPos,revC[8];
 
 	//jump rightward...
 	for(int pos=0;pos<32;pos++)for(ch[0]=0;ch[0]<4;ch[0]++)for(ch[1]=0;ch[1]<4;ch[1]++)
 	for(ch[2]=0;ch[2]<4;ch[2]++)for(ch[3]=0;ch[3]<4;ch[3]++)for(ch[4]=0;ch[4]<4;ch[4]++)
 	for(ch[5]=0;ch[5]<4;ch[5]++)for(ch[6]=0;ch[6]<4;ch[6]++)for(ch[7]=0;ch[7]<4;ch[7]++){
-		//std::cout<<"flag1"<<std::endl;
 		tmpPos=BoardState::jumpRightPosition(pos%8,ch);
 		if(tmpPos==invalidPos)
 			tmpPos=chessPos::illegal;
@@ -246,7 +243,6 @@ void BoardState::countJumpTable(int validTable[]){
 			tmpPos=pos-(pos%8)+tmpPos;
 		validTable[(chessDirection::right<<21) | (pos<<16) | (ch[0]<<14) | (ch[1]<<12) |
 			(ch[2]<<10) | (ch[3]<<8) | (ch[4]<<6) | (ch[5]<<4) | (ch[6]<<2) | ch[7]]=tmpPos;
-		//std::cout<<"tmpPos="<<tmpPos<<std::endl;
 	}
 
 	//jump leftward...
@@ -389,10 +385,6 @@ void printEatTable(){
 					resultTable[currentChess][nextChess]=1;
 				continue;
 			}
-
-			//if(type(currentChess)<chessNum::cannon && type(nextChess)<chessNum::pawn &&
-			  //type(currentChess)<=type(nextChess))
-				//return 1;
 		}
 	}
 	for(int currentChess=0;currentChess<16;currentChess++){

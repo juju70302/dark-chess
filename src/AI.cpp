@@ -56,7 +56,7 @@ void AI::chooseOneForFlip(struct Move& moveOut){
 
 int AI::countTime(){
 	if(step<MAX_STEP-10)
-		return(int)((1000*totalSecond)/(MAX_STEP-step));
+		return(int)((1000*totalSecond)/(MAX_STEP));
 	return(int)((remainMilliSecond)/20);
 }
 
@@ -86,19 +86,27 @@ int AI::chooseFlip(){
 void AI::noFlipSearchMove(struct Move& moveOut,int milliseconds){
 	std::chrono::high_resolution_clock::time_point start,stop;
 	start = std::chrono::high_resolution_clock::now();
+	int branch,usingTime;
+
+	struct Move moveList[Move::maxBranch+1];int order[Move::maxBranch+1];
+	Color turn=(state.myTurn)?state.myColor:state.flipColor(state.myColor);
+	branch=generateMove(state,moveList,turn,order);
+	branch+=(state.closedNum[0]+state.closedNum[1]);
 
 	//Iterative Deepening...
 	for(int depth=MIN_SEARCH_DEPTH;depth<MAX_SEARCH_DEPTH;depth++){
-		fprintf(stderr,"noFlipSearchMove depth %d",depth);fflush(stderr);
+		fprintf(stderr,"noFlipSearchMove depth %d  ",depth);fflush(stderr);
 		noFlipNegaScout(depth,moveOut);
 		stop = std::chrono::high_resolution_clock::now();
 #ifdef _INFORMATION_
 		std::cout<<"depth "<<depth<<"\tusing time >> ";
 		std::cout<<(std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count())<<std::endl;
 #endif
-		fprintf(stderr,"time = %d ms...\n",std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count());
+		fprintf(stderr,"time = %d ms...\n",(int)(std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count()));
 		fflush(stderr);
-		if(std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count()>=milliseconds)
+
+		usingTime=(int)std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
+		if(usingTime>=milliseconds||(usingTime*(branch+1)>=milliseconds))
 			break;
 	}
 }
@@ -112,8 +120,7 @@ void AI::completeSearchMove(struct Move& moveOut,int milliseconds){
 	struct Move moveList[Move::maxBranch+1];int order[Move::maxBranch+1];
 	Color turn=(state.myTurn)?state.myColor:state.flipColor(state.myColor);
 	branch=generateMove(state,moveList,turn,order);
-	branch*=(state.closedNum[0]+state.closedNum[1]);
-//std::cout<<"branch="<<branch<<std::endl;
+	branch+=(state.closedNum[0]+state.closedNum[1]);
 
 	//Iterative Deepening...
 	for(int depth=MIN_SEARCH_DEPTH;;depth++){
@@ -150,10 +157,6 @@ Score AI::noFlipNegaScout(int depth,struct Move& moveOut){
 
 	if(moveNum==0)return (Score)0;
 
-
-//std::cout<<"movNum="<<moveNum<<std::endl;
-//std::cout<<"0th move>>"<<moveList[order[0]].toString()<<std::endl;
-
 	if(moveList[order[0]].type==moveType::flip){
 		maxScore=chance_node(0,depth);
 	}
@@ -166,10 +169,7 @@ Score AI::noFlipNegaScout(int depth,struct Move& moveOut){
 	}
 	maxIndex=order[0];
 
-//std::cout<<"flag2"<<std::endl;
-
-
-	for(int moveIndex=1;moveIndex<2;moveIndex++){
+	for(int moveIndex=1;moveIndex<moveNum;moveIndex++){
 		if(moveList[order[moveIndex]].type==moveType::flip){
 			thisScore=chance_node(moveIndex,depth);
 		}
@@ -180,9 +180,6 @@ Score AI::noFlipNegaScout(int depth,struct Move& moveOut){
 			state.flipTurn();
 			state.unMove(moveList[order[moveIndex]]);
 		}
-
-//std::cout<<"node \""<<moveIndex<<"\"\n";
-
 		if(thisScore>maxScore){
 			maxIndex=order[moveIndex];
 			maxScore=thisScore;
@@ -213,11 +210,6 @@ Score AI::completeNegaScout(int depth,struct Move& moveOut){
 	//generating move...
 	moveNum=generateMove(state,moveList,(state.myTurn==0)?state.flipColor(state.myColor):state.myColor,order);
 
-
-
-//std::cout<<"movNum="<<moveNum<<std::endl;
-//std::cout<<"0th move>>"<<moveList[order[0]].toString()<<std::endl;
-
 	if(moveList[order[0]].type==moveType::flip){
 		maxScore=chance_node(0,depth);
 	}
@@ -230,10 +222,7 @@ Score AI::completeNegaScout(int depth,struct Move& moveOut){
 	}
 	maxIndex=order[0];
 
-//std::cout<<"flag2"<<std::endl;
-
-
-	for(int moveIndex=1;moveIndex<2;moveIndex++){
+	for(int moveIndex=1;moveIndex<moveNum;moveIndex++){
 		if(moveList[order[moveIndex]].type==moveType::flip){
 			thisScore=chance_node(moveIndex,depth);
 		}
@@ -245,8 +234,6 @@ Score AI::completeNegaScout(int depth,struct Move& moveOut){
 			state.unMove(moveList[order[moveIndex]]);
 		}
 
-//std::cout<<"node \""<<moveIndex<<"\"\n";
-
 		if(thisScore>maxScore){
 			maxIndex=order[moveIndex];
 			maxScore=thisScore;
@@ -254,6 +241,7 @@ Score AI::completeNegaScout(int depth,struct Move& moveOut){
 	}
 	moveOut=moveList[maxIndex];
 
+	return maxScore;
 #undef nega_scout
 #undef chance_node
 }
@@ -269,12 +257,10 @@ void AI::startGameMove(struct Move& moveOut){
 	}
 
 	if(step==1){
-		Chess firstFlipChess;
-		int firstFlipPos,secondFlipPos;
-		Color enemy=chessColor::unknown;
+		Chess firstFlipChess=chessNum::dark;
+		int firstFlipPos=0;
 		for(int i=0;i<CHESS_NUM;i++){
 			if(state.board[i]!=chessNum::dark&&state.board[i]!=chessNum::empty){
-				enemy=BoardState::colorWithoutCheck(state.board[i]);
 				break;
 			}
 		}

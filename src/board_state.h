@@ -34,9 +34,6 @@ struct Move{
 			else ss<<"X";
 			ss<<"\" ";
 		}
-		//else{
-			//ss<<"chess=\""<<BoardState::intToChar(nextChess)<<"\" ";
-		//}
 		ss<<"type=\"";
 		if(type==moveType::go)ss<<"go";
 		else if(type==moveType::jump)ss<<"jump";
@@ -100,7 +97,7 @@ public:
 	inline int jumpPosition(int dir,int currentPos)const;
 	static void countJumpTable(int validTable[]=jumpTable);
 
-	static inline int type(Chess chessIn);
+	static inline Chess type(Chess chessIn);
 	static inline Color colorWithoutCheck(Chess chessIn);
 	static inline int isMovable(Chess chessIn);
 
@@ -145,8 +142,6 @@ inline int BoardState::isAttackedByCannon(int posIn,Color enemy)const{
 			pos=BoardState::goNextPos[(dir<<5)|pos];
 		}
 		if(pos==chessPos::illegal)continue;
-//if(dir==chessDirection::right)std::cout<<"flag2\n";
-//if(dir==chessDirection::right)std::cout<<"chess = \""<<boardIn.intToChar(boardIn.board[pos])<<"\"\n";
 		if(BoardState::type(board[pos])==chessNum::cannon&&
 		  colorWithoutCheck(board[pos])==enemy){
 			needRunLarge=1;
@@ -172,8 +167,6 @@ inline int BoardState::isDangerous(int posIn)const{
 			pos=BoardState::goNextPos[(dir<<5)|pos];
 		}
 		if(pos==chessPos::illegal)continue;
-//if(dir==chessDirection::right)std::cout<<"flag2\n";
-//if(dir==chessDirection::right)std::cout<<"chess = \""<<boardIn.intToChar(boardIn.board[pos])<<"\"\n";
 		if(BoardState::type(board[pos])==chessNum::cannon&&
 		  colorWithoutCheck(board[pos])!=ourColor){
 			needRunLarge=1;
@@ -200,16 +193,14 @@ inline void BoardState::largestChess(Chess& redLargest,Chess& blackLargest)const
 	for(blackLargest=chessNum::black::king;blackLargest<=chessNum::black::pawn;blackLargest++){
 		if(closedChess[blackLargest]+movableList[blackLargest])break;
 	}
-//std::cout<<std::endl<<"red original largest=\""<<redLargest<<"\""<<std::endl;
-//std::cout<<std::endl<<"black original largest=\""<<type(blackLargest)<<"\""<<std::endl;
-	if(redLargest > type(blackLargest)){
+	if(redLargest > (Chess)type(blackLargest)){
 		if((closedChess[chessNum::red::cannon]+movableList[chessNum::red::cannon]))
 			redLargest=chessNum::red::cannon;
 		else if((blackLargest==chessNum::black::king)&&((closedChess[chessNum::red::pawn]+movableList[chessNum::red::pawn])))
 			redLargest=chessNum::red::pawn;
 	}
 
-	if(redLargest < type(blackLargest)){
+	if(redLargest < (Chess)type(blackLargest)){
 		if((closedChess[chessNum::black::cannon]+movableList[chessNum::black::cannon]))
 			blackLargest=chessNum::black::cannon;
 		else if((redLargest==chessNum::red::king)&&((closedChess[chessNum::black::pawn]+movableList[chessNum::black::pawn])))
@@ -308,7 +299,6 @@ inline int BoardState::jumpPosition(int dir,int currentPos)const{
 	int ch[8];
 	if(dir>chessDirection::down){//horizontal jump...
 		for(int i=0;i<8;i++)ch[i]=changeTable[(int)board[i+currentPos-currentPos%8]];
-//std::cout<<"after change>>";for(int i=0;i<8;i++)std::cout<<(int)ch[i];std::cout<<std::endl;
 		return BoardState::jumpTable[(dir<<21)|(currentPos<<16)|(ch[0]<<14)|(ch[1]<<12)|
 			(ch[2]<<10)|(ch[3]<<8)|(ch[4]<<6)|(ch[5]<<4)|(ch[6]<<2)|ch[7]];
 	}
@@ -434,7 +424,7 @@ inline void BoardState::flipTurn(){
 	myTurn^=0b0001;
 }
 
-inline int BoardState::type(Chess chessIn){
+inline Chess BoardState::type(Chess chessIn){
 	return ((int)chessIn)&0b0111;
 }
 

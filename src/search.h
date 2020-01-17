@@ -58,7 +58,6 @@ inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],in
 		}
 	}
 	if(needRunLarge){
-//std::cout<<"need run!!\n";
 		for(int i=0;i<moveNum;i++){
 			if(moveList[i].currentChess==ourLarge){
 				order[orderNum]=i;
@@ -67,12 +66,9 @@ inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],in
 			}
 		}
 	}
-	//else std::cout<<"king is safe...\n";
-
 	for(int i=0;i<moveNum;i++){//Eating enemy's king...
 		if(recorded[i]||moveList[i].type==moveType::flip)continue;
 		if(moveList[i].nextChess==emyLarge){
-//std::cout<<"move \'"<<moveList[i].toString()<<"\" can capture enemy's king"<<std::endl;
 			order[orderNum++]=i;
 			recorded[i]=1;
 		}
@@ -81,7 +77,6 @@ inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],in
 	for(int i=0;i<moveNum;i++){//Capturing being eaten...
 		if(recorded[i]||moveList[i].type==moveType::flip)continue;
 		if(boardIn.isDangerous(moveList[i].currentPos)){
-//std::cout<<"move \'"<<moveList[i].toString()<<"\" to run \""<<boardIn.intToChar(moveList[i].currentChess)<<"\""<<std::endl;
 			order[orderNum++]=i;
 			recorded[i]=1;
 		}
@@ -90,7 +85,6 @@ inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],in
 	for(int i=0;i<moveNum;i++){//Eating enemy's chess...
 		if(recorded[i]||moveList[i].type==moveType::flip)continue;
 		if(boardIn.isMovable(moveList[i].nextChess)){
-//std::cout<<"move \'"<<moveList[i].toString()<<"\" can eat enemy..."<<std::endl;
 			order[orderNum++]=i;
 			recorded[i]=1;
 		}
@@ -107,13 +101,14 @@ inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],in
 		order[orderNum++]=i;
 		recorded[i]=1;
 	}
-//std::cout<<"orderNum="<<orderNum<<std::endl;
 	return 1;
 #else
 	for(int i=0;i<moveNum;i++)order[i]=i;
+		return 1;
 #endif
 }
 
+//with chance node search...
 #ifdef _USING_TRANS_TABLE_
 inline Score negaScout2(BoardState& boardIn,TransTable& transTableIn,Score alpha,Score beta,int depth)
 #else
@@ -122,8 +117,6 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 {
 	//terminal consition
 	if(depth==0||boardIn.isOver()){
-//std::cout<<std::endl<<"score=\""<<evaluatingFunction(boardIn)<<"\"\tdepth=\""<<depth<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
 		return evaluatingFunction(boardIn);
 	}
 
@@ -171,17 +164,11 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 	m=std::max(((Score)-1)*inf,m);	//the current lower bound; fail soft
 	n=beta;		//the current upper bound
 	for(int moveIndex=0;moveIndex<moveNum;moveIndex++){
-
-//if(depth==3)std::cout<<"flag1\n";
-
-
 		if(moveList[order[moveIndex]].type==moveType::flip){//flip
 #ifdef _USING_TRANS_TABLE_
 			scoutT=chanceNodeSearch(boardIn,transTableIn,moveList[order[moveIndex]].currentPos,std::max(alpha,m),beta,depth);
-			//scoutT=chanceNodeSearch(boardIn,transTableIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
 #else
 			scoutT=chanceNodeSearch(boardIn,moveList[order[moveIndex]].currentPos,std::max(alpha,m),beta,depth);
-			//scoutT=chanceNodeSearch(boardIn,moveList[order[moveIndex]].currentPos,alpha,beta,depth);
 #endif
 			if(scoutT>m){
 				m=scoutT;
@@ -202,27 +189,11 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 			boardIn.flipTurn();
 			boardIn.unMove(moveList[order[moveIndex]]);
 			if(scoutT>m){
-
-//if(depth==3)std::cout<<"\tflag2-1\n";
-
-
 				if((n == beta)||(depth < 3)||(scoutT >= beta))
 					m=scoutT;
 				else{//re-search...
-
-//if(depth==3){
-	//std::cout<<"\t\tflag2-1-1\n";
-	//std::cout<<"position>>"<<std::endl;boardIn.print();
-	//std::cout<<std::endl<<"move = \""<<moveList[order[moveIndex]].toString()<<"\"\n";
-	//std::cout<<
-//}
-
-
 					boardIn.moveWithoutCheck(moveList[order[moveIndex]]);
 					boardIn.flipTurn();
-
-//if(depth==3)std::cout<<"\t\tflag2-1-2\n";
-
 
 #ifdef _USING_TRANS_TABLE_
 					m=-1*negaScout2(boardIn,transTableIn,-1*beta,-1*scoutT,depth-1);
@@ -230,21 +201,12 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 					m=-1*negaScout2(boardIn,-1*beta,-1*scoutT,depth-1);
 #endif
 
-//if(depth==3)std::cout<<"\t\tflag2-1-3\n";
-
-
 					//reset to original position...
 					boardIn.flipTurn();
 					boardIn.unMove(moveList[order[moveIndex]]);
 
-//if(depth==3)std::cout<<"\t\tflag2-1-4\n";
-
 
 				}
-
-//if(depth==3)std::cout<<"\tflag2-2\n";
-
-
 			}
 		}
 
@@ -291,6 +253,7 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 	return m;
 }
 
+//no chance node search...
 #ifdef _USING_TRANS_TABLE_
 inline Score negaScout1(BoardState& boardIn,TransTable& transTableIn,Score alpha,Score beta,int depth)
 #else
@@ -299,8 +262,6 @@ inline Score negaScout1(BoardState& boardIn,Score alpha,Score beta,int depth)
 {
 	//terminal consition
 	if(depth==0||boardIn.isOver()){
-//std::cout<<std::endl<<"score=\""<<evaluatingFunction(boardIn)<<"\"\tdepth=\""<<depth<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
 		return evaluatingFunction(boardIn);
 	}
 
@@ -357,11 +318,6 @@ inline Score negaScout1(BoardState& boardIn,Score alpha,Score beta,int depth)
 #else
 		scoutT=-1*negaScout1(boardIn,-1*n,-1*std::max(alpha,m),depth-1);
 #endif
-
-//std::cout<<std::endl;for(int i=0;i<(2-depth);i++)std::cout<<"  ";
-//std::cout<<"score=\""<<scoutT<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
-
 		if(scoutT>m){
 			if((n == beta)||(depth < 3)||(scoutT >= beta))
 				m=scoutT;
@@ -430,28 +386,24 @@ inline float chanceNodeSearch(BoardState& boardIn,int posIn,Score alpha,Score be
 #endif
 {
 	float vSum=0.0,prob;
-	Color clr=(boardIn.myTurn)?boardIn.myColor:BoardState::flipColor(boardIn.myColor);
 	struct Move m;m.type=moveType::flip;m.currentPos=posIn;m.nextPos=posIn;
 	int totalClosed=0;
 	Score thisScore;
 
 	for(int i=0;i<2;i++)for(int j=0;j<PIECE_NUM;j++)totalClosed+=boardIn.closedChess[(i<<3)|j];
-//std::cout<<"total closed chess = \""<<totalClosed<<"\""<<std::endl;
 	for(int i=0;i<2;i++){
 		for(int j=0;j<PIECE_NUM;j++){
 			if(boardIn.closedChess[(i<<3)|j]==0)continue;
 			prob=(((float)boardIn.closedChess[(i<<3)|j]) / ((float)totalClosed));
 
-			//m.nextChess=(i<<3)|j;
 			boardIn.flipChessWithoutCheck(posIn,(i<<3)|j);
 			boardIn.flipTurn();
 
 #ifdef _USING_TRANS_TABLE_
-			thisScore=-1.0*negaScout(boardIn,transTableIn,alpha,beta,depth-1);
+			thisScore=-1.0*negaScout1(boardIn,transTableIn,alpha,beta,depth-1);
 #else
-			thisScore=-1.0*negaScout(boardIn,Score alpha,Score beta,depth-1);
+			thisScore=-1.0*negaScout1(boardIn,alpha,beta,depth-1);
 #endif
-//std::cout<<"this score = \""<<thisScore<<"\""<<std::endl;
 			boardIn.flipTurn();
 			boardIn.unMove(m);
 			vSum+=(prob*((float)thisScore));
@@ -464,7 +416,7 @@ inline int noFlipMoveNum(const BoardState& boardIn){
 	Color colorIn=(boardIn.myTurn)?boardIn.myColor:BoardState::flipColor(boardIn.myColor);
 	int moveNum=0;
 	int currentPos,nextPos;
-	Chess currentChess,nextChess;
+	Chess nextChess;
 
 	//walk or jump move...
 	for(int i=0;i<boardIn.movableNum[(int)colorIn];i++){
@@ -539,7 +491,6 @@ inline int generateMove(BoardState& boardIn,Move moveList[],Color turn,int order
 			moveNum++;
 		}
 	}
-	//for(int i=0;i<moveNum;i++)order[i]=i;
 	moveOrdering(boardIn,moveList,order,moveNum);
 	return moveNum;
 }
@@ -587,7 +538,6 @@ inline int generateMoveWithoutFlip(BoardState& boardIn,Move moveList[],Color tur
 
 inline Score evaluatingFunction(const BoardState& boardIn){
 	static const int c1=1;
-	//static const float c2=0.5;
 
 	return ((boardIn.myTurn==0)?-1:1)*c1*materialValues(boardIn);
 }
@@ -617,13 +567,6 @@ inline Score materialValues(const BoardState& boardIn){
 		materialValueTable[(int)chessNum::red::pawn]=material_value::pawn_with_king;
 	else
 		materialValueTable[(int)chessNum::black::cannon]=material_value::cannon_without_king;
-
-
-	//std::cout<<"point="<<c1*(float)openMaterialValues(boardIn,materialValueTable) +
-		//c2*(float)closedMaterialValues(boardIn,materialValueTable)<<std::endl;
-	//std::cout<<"open mv="<<openMaterialValues(boardIn,materialValueTable)<<std::endl;
-	//std::cout<<"closed mv="<<closedMaterialValues(boardIn,materialValueTable)<<std::endl;
-
 	return c1*openMaterialValues(boardIn,materialValueTable) +
 		c2*closedMaterialValues(boardIn,materialValueTable);
 }
@@ -671,167 +614,4 @@ inline Score openMaterialValues(const BoardState& boardIn,const Score materialVa
 
 	return value;
 }
-/*
-
-#ifdef _USING_TRANS_TABLE_
-inline Score negaScout(BoardState& boardIn,TransTable& transTableIn,Score alpha,Score beta,int depth){
-	//terminal consition
-	if(depth==0||boardIn.isOver())
-		return evaluatingFunction(boardIn);
-
-	static const Score inf=1000000;
-	struct TransData* hashValue;
-	int hitResult;
-	Score m,n,scoutT;
-	struct Move moveList[Move::maxBranch+1];
-	int moveNum,order[Move::maxBranch+1];
-
-	//test whether hit the hash table...
-	hashValue=nullptr;m=-1*inf;
-	hitResult=transTableIn.isHit(boardIn.hashValue,&hashValue);
-	if(hitResult){
-		if(hashValue->depth >= depth){
-			//Immediately return while hit exactly value!!
-			if(hashValue->flag == TransData::exact)
-				return hashValue->score;
-			if(hashValue->flag == TransData::upper){
-				alpha=std::max(alpha,hashValue->score);
-				if(alpha>=beta)return alpha;
-			}
-			if(hashValue->flag == TransData::lower){
-				beta=std::min(beta,hashValue->score);
-				if(beta<=alpha)return alpha;
-			}
-		}
-		else if(hashValue->flag == TransData::exact){
-			m=hashValue->score;
-		}
-	}
-
-	//generating move...
-	moveNum=generateMoveWithoutFlip(boardIn,moveList,(boardIn.myTurn==0)?boardIn.flipColor(boardIn.myColor):boardIn.myColor,order);
-
-	if(moveNum==0){
-		return evaluatingFunction(boardIn);
-	}
-
-	m=std::max(((Score)-1)*inf,m);	//the current lower bound; fail soft
-	n=beta;		//the current upper bound
-	for(int moveIndex=0;moveIndex<moveNum;moveIndex++){
-		boardIn.moveWithoutCheck(moveList[order[moveIndex]]);
-		boardIn.flipTurn();
-
-		//scout first
-		scoutT=-1*negaScout(boardIn,transTableIn,-1*n,-1*std::max(alpha,m),depth-1);
-
-//std::cout<<std::endl;for(int i=0;i<(2-depth);i++)std::cout<<"  ";
-//std::cout<<"score=\""<<scoutT<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
-
-		if(scoutT>m){
-			if((n == beta)||(depth < 3)||(scoutT >= beta))
-				m=scoutT;
-			else//re-search...
-				m=-1*negaScout(boardIn,transTableIn,-1*beta,-1*scoutT,depth-1);
-		}
-
-		//cut-off
-		if(m>=beta){
-			boardIn.flipTurn();
-			boardIn.unMove(moveList[order[moveIndex]]);
-
-			//update trans table...
-			if((!hitResult)||(hashValue->depth < depth)){
-				struct TransData dataIn;
-				dataIn.score=m;
-				dataIn.flag=TransData::lower;
-				dataIn.depth=depth;
-				transTableIn.update(boardIn.hashValue,dataIn);
-			}
-
-			return m;
-		}
-
-		//set up a null window
-		n=std::max(alpha,m)+1;
-
-		//reset to original position...
-		boardIn.flipTurn();
-		boardIn.unMove(moveList[moveIndex]);
-	}
-	if(m>alpha){
-		if((!hitResult)||(hashValue->depth < depth)||((hashValue->depth == depth)&&
-		  (hashValue->flag != TransData::exact))){
-			struct TransData dataIn;
-			dataIn.score=m;
-			dataIn.flag=TransData::exact;dataIn.depth=depth;
-			transTableIn.update(boardIn.hashValue,dataIn);
-		}
-	}
-	else{
-		if((!hitResult)||(hashValue->depth < depth)){
-			struct TransData dataIn;
-			dataIn.score=m;
-			dataIn.flag=TransData::upper;
-			dataIn.depth=depth;
-			transTableIn.update(boardIn.hashValue,dataIn);
-		}
-	}
-
-	return m;
-}
-#else
-inline int negaScout(BoardState& boardIn,int alpha,int beta,int depth){
-	//terminal consition
-	if(depth==0||boardIn.isOver())	return evaluatingFunction(boardIn);
-
-	static const int inf=1000000;
-	int m,n,scoutT;
-	struct Move moveList[Move::maxBranch+1];
-	int moveNum;
-	moveNum=generateMoveWithoutFlip(boardIn,moveList,(boardIn.myTurn==0)?boardIn.flipColor(boardIn.myColor):boardIn.myColor);
-
-	if(moveNum==0){
-//std::cout<<"Error:no move in moveList..."<<std::endl<<"board>>"<<std::endl;boardIn.print();std::cout<<std::endl;
-		return evaluatingFunction(boardIn);
-	}
-
-	m=-1*inf;	//the current lower bound; fail soft
-	n=beta;		//the current upper bound
-	for(int moveIndex=0;moveIndex<moveNum;moveIndex++){
-		boardIn.moveWithoutCheck(moveList[moveIndex]);
-		boardIn.flipTurn();
-
-		//scout first
-		scoutT=-1*negaScout(boardIn,-1*n,-1*std::max(alpha,m),depth-1);
-
-//std::cout<<std::endl;for(int i=0;i<(2-depth);i++)std::cout<<"  ";
-//std::cout<<"score=\""<<scoutT<<"\""<<std::endl;
-//std::cout<<"board>>"<<std::endl;boardIn.print();
-
-		if(scoutT>m){
-			if((n == beta)||(depth < 3)||(scoutT >= beta))
-				m=scoutT;
-			else//re-search...
-				m=-1*negaScout(boardIn,-1*beta,-1*scoutT,depth-1);
-		}
-
-		//cut-off
-		if(m>=beta){
-			boardIn.flipTurn();
-			boardIn.unMove(moveList[moveIndex]);
-			return m;
-		}
-
-		//set up a null window
-		n=std::max(alpha,m)+1;
-
-		//reset to original position...
-		boardIn.flipTurn();
-		boardIn.unMove(moveList[moveIndex]);
-	}
-	return m;
-}
-#endif
-*/
 #endif

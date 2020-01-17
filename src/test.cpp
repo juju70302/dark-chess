@@ -1,4 +1,3 @@
-#include "MyAI.h"
 #include "board_state.h"
 #include "search.h"
 #include "AI.h"
@@ -296,11 +295,11 @@ void testJumpTable(){
 	//0:empty 1:red 2:dark 3:black
 	static const int empty=0;	static const int red=1;
 	static const int dark=2;	static const int black=3;
-	static const int invalidPos=-1;
-	int changeTable[16]={
-		1,	1,	1,	1,	1,	1,	1,	0,	3,	3,	3,	3,	3,	3,	3,	2
-	};
-	int pos[]={black,red,red,empty,empty,empty,empty,empty};
+	//static const int invalidPos=-1;
+	//int changeTable[16]={
+		//1,	1,	1,	1,	1,	1,	1,	0,	3,	3,	3,	3,	3,	3,	3,	2
+	//};
+	int pos[]={black,red,red,empty,dark,empty,empty,empty};
 	int chessPosIn=31;
 	int chessDirIn=chessDirection::up;
 	cout<<"jump to \""<<

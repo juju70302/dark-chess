@@ -457,16 +457,17 @@ void CDCagent::Print_Chess ( int chess_no,char *Result ) {
 }
 //-------------------------------------------- playing function ----------------------------------------------
 void CDCagent::Play(char move[6]) {
+/*
 	// move generation	
 	int non_flip_moves[100];
-	int total_non_flip = this->NonFlipList(this->Board, this->Color, non_flip_moves);
+	//int total_non_flip = this->NonFlipList(this->Board, this->Color, non_flip_moves);
 	int flip_moves[32];
-	int total_flip = this->FlipList(flip_moves);
+	//int total_flip = this->FlipList(flip_moves);
 	//fprintf(stderr, "non_flip: %d, flip: %d\n", total_non_flip, total_flip);
 
 	// move decision (searching happens here)
 	int Answer = 0;
-	/*
+
 	#ifdef RANDOM // random decision on move
 	// if able to do non-flip move
 	if ( total_non_flip > 0 ) {
@@ -480,11 +481,11 @@ void CDCagent::Play(char move[6]) {
 	#endif
 */
 	// move translation 
-	int startPoint = Answer/100;
-	int endPoint   = Answer%100;
-	sprintf(move, "%c%c-%c%c",'a'+(startPoint%4),'1'+(7-startPoint/4),'a'+(endPoint%4),'1'+(7-endPoint/4));
+	//int startPoint = Answer/100;
+	//int endPoint   = Answer%100;
+	//sprintf(move, "%c%c-%c%c",'a'+(startPoint%4),'1'+(7-startPoint/4),'a'+(endPoint%4),'1'+(7-endPoint/4));
 	
-	char chess_Start[10] = "", chess_End[10] = "";
+	//char chess_Start[10] = "", chess_End[10] = "";
 	//Print_Chess(Board[startPoint],chess_Start);
 	//Print_Chess(Board[endPoint],chess_End);
 	
@@ -494,7 +495,6 @@ void CDCagent::Play(char move[6]) {
 	//this->Print_Chessboard();
 
 	//my code...
-	char m0,m1;int pos1;
 	struct Move moveOut;
 	state.myTurn=1;
 

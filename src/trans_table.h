@@ -1,5 +1,4 @@
 #include "definition.h"
-//#include "board_state.h"
 #include <functional>
 #include <fstream>
 
@@ -21,6 +20,7 @@ struct TransData{
 		score=dataIn.score;
 		depth=dataIn.depth;
 		flag=dataIn.flag;
+		return *this;
 	};
 };
 
