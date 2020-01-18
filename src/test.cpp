@@ -13,16 +13,63 @@ void testEvaluate();
 void testGenerate();
 void testTrabsTable();
 void testAI();
+void testBigChess();
 
 int main(){
 	init();
-	testAI();
+	testBigChess();
+	//testAI();
 	//testGenerate();
 	//testTrabsTable();
 	//testMove();
 	//testEvaluate();
 
 	return 0;
+}
+
+void testBigChess(){
+	char bdIn[32]={
+		'k','-','-','-','-','-','c','-',
+		'P','N','-','-','n','-','-','-',
+		'-','-','-','-','-','-','-','-',
+		'-','-','-','-','-','-','-','-'
+	};
+	int closed[]={
+		0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0
+	};
+
+	AI ai;
+	ai.state.init(bdIn,closed,0,chessColor::unknown);
+	cout<<"original board>>"<<endl<<endl;ai.state.print();
+	cout<<"piece list>>"<<endl;ai.state.printPieceList();
+
+	//BigChess bc;
+	//cout<<"flag1"<<endl;
+	MaterialValue mv;
+	//cout<<"flag2"<<endl;
+	//cout<<" red  biggest = \""<<BoardState::intToChar(bc.big[(int)chessColor::red])<<"\""<<endl;
+	//cout<<"black biggest = \""<<BoardState::intToChar(bc.big[(int)chessColor::black])<<"\""<<endl;
+	mv.reset(ai.state.movableList,ai.state.closedChess);
+	cout<<endl;
+	cout<<" red  biggest = \""<<BoardState::intToChar(mv.big.big[(int)chessColor::red])<<"\""<<endl;
+	cout<<"black biggest = \""<<BoardState::intToChar(mv.big.big[(int)chessColor::black])<<"\""<<endl;
+	cout<<"material value>>"<<endl<<mv.toString();
+
+	struct Move moveIn;
+	moveIn.type=moveType::go;		moveIn.dir=chessDirection::up;
+	moveIn.currentPos=8;			moveIn.nextPos=0;
+	moveIn.currentChess=ai.state.board[moveIn.currentPos];
+	moveIn.nextChess=ai.state.board[moveIn.nextPos];
+
+	ai.state.moveWithoutCheck(moveIn);
+	cout<<"after move board>>"<<endl<<endl;ai.state.print();
+
+	mv.removeChessAfter(ai.state.movableList,ai.state.closedChess,moveIn.nextChess);
+	cout<<endl;
+	cout<<" red  biggest = \""<<BoardState::intToChar(mv.big.big[(int)chessColor::red])<<"\""<<endl;
+	cout<<"black biggest = \""<<BoardState::intToChar(mv.big.big[(int)chessColor::black])<<"\""<<endl;
+	cout<<"material value>>"<<endl<<mv.toString();
 }
 
 void testAI(){
@@ -47,7 +94,7 @@ void testAI(){
 	if(ai.move(firstMove))cout<<"first move >>\t"<<firstMove.toString()<<endl;
 	else cout<<"Error to first move >>\t"<<firstMove.toString()<<endl;
 
-	cout<<endl<<"myTurn1=\""<<ai.state.myTurn<<endl<<endl;
+	cout<<endl<<"myTurn1=\""<<ai.state.myTurn()<<endl<<endl;
 
 	cout<<endl<<"board>>"<<endl;ai.state.print();cout<<endl;
 
@@ -58,7 +105,7 @@ void testAI(){
 
 	cout<<endl<<"board>>"<<endl;ai.state.print();cout<<endl;
 
-	cout<<endl<<"myTurn2=\""<<ai.state.myTurn<<endl<<endl;
+	cout<<endl<<"myTurn2=\""<<ai.state.myTurn()<<endl<<endl;
 
 
 	thirdMove.type=moveType::go;thirdMove.currentPos=3;thirdMove.nextPos=11;

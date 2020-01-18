@@ -71,7 +71,7 @@ bool CDCagent::flip(const char* data[], char* response){
 	sprintf(move, "%s(%s)", data[0], data[1]);
 	this->MakeMove(move);
 
-	fprintf(stderr,"\n\nflip()...\n\n");fflush(stderr);
+	//fprintf(stderr,"\n\nflip()...\n\n");fflush(stderr);
 	return 0;
 }
 bool CDCagent::genmove ( const char* data[], char* response ) {
@@ -89,7 +89,7 @@ bool CDCagent::genmove ( const char* data[], char* response ) {
 	}
 	fprintf(stderr,"\n\ngenmove():reset color...\n\n");fflush(stderr);
 	// genmove
-	state.myTurn=1;
+	state.setMyTurn(1);
 	char move[6];
 	this->Play(move);
 	sprintf(response, "%c%c %c%c", move[0], move[1], move[3], move[4]);
@@ -190,11 +190,11 @@ void CDCagent::initBoardState () {
 		1,2,2,2,2,2,5
 	};
 
-	if(state.myColor==chessColor::red||state.myColor==chessColor::black){
+	if(state.myColor()==chessColor::red||state.myColor()==chessColor::black){
 		int clr1;
-		clr1=state.myColor;
+		clr1=state.myColor();
 		state.init(bdIn,closed,0,chessColor::unknown);
-		state.myColor=clr1;
+		state.setColor(clr1);
 	}
 	else
 		state.init(bdIn,closed,0,chessColor::unknown);
@@ -274,8 +274,8 @@ void CDCagent::MakeMove(const char move[6]) {
 	}
 	Print_Chessboard();
 	std::string strColor="";
-	if(state.myColor==chessColor::red)strColor="I'm red";
-	else if(state.myColor==chessColor::black)strColor="I'm black";
+	if(state.myColor()==chessColor::red)strColor="I'm red";
+	else if(state.myColor()==chessColor::black)strColor="I'm black";
 	else strColor="I don't know my color...";
 	fprintf(stderr, "%s\n",strColor.c_str());
 	fprintf(stderr,"step = %d\n",AI::step);
@@ -394,44 +394,10 @@ bool CDCagent::IsLegal ( int* chess,int from_location_no,int to_location_no,int 
 //-------------------------------------------- Display -------------------------------------------------------
 //Display chess board
 void CDCagent::Print_Chessboard () {
-/*	
-	char Mes[1024]="";
-	char temp[1024];
-	char myColor[10]="";
-	if(Color == -99) {
-		strcpy(myColor,"Unknown");
-	}
-	else if(this->Color == RED) {
-		strcpy(myColor,"Red");
-	}
-	else {
-		strcpy(myColor,"Black");
-	}
-	sprintf(temp,"------------%s-------------\n",myColor);
-	strcat(Mes,temp);
-	strcat(Mes,"<8> ");
-	for(int i=0;i<32;i++){
-		if(i != 0 && i % 4 == 0){
-			sprintf(temp,"\n<%d> ",8-(i/4));
-			strcat(Mes,temp);
-		}
-		char chess_name[10]="";
-		Print_Chess(this->Board[i],chess_name);
-		sprintf(temp,"%5s", chess_name);
-		strcat(Mes,temp);
-	}
-	strcat(Mes,"\n\n     ");
-	for(int i=0;i<4;i++){
-		sprintf(temp," <%c> ",'a'+i);
-		strcat(Mes,temp);
-	}
-	strcat(Mes,"\n\n");
-	fprintf(stderr, "%s",Mes);
-*/
 	std::string buffer="";
 
-	for(int j=8;j>=0;j--){
-		fprintf(stderr, "\n<%d>  ",j);
+	for(int j=7;j>=0;j--){
+		fprintf(stderr, "\n<%d>  ",j+1);
 		for(int i=0;i<4;i++){
 			fprintf(stderr," [%c] ",BoardState::intToChar(state.board[(i<<3)|j]));
 		}
@@ -457,46 +423,9 @@ void CDCagent::Print_Chess ( int chess_no,char *Result ) {
 }
 //-------------------------------------------- playing function ----------------------------------------------
 void CDCagent::Play(char move[6]) {
-/*
-	// move generation	
-	int non_flip_moves[100];
-	//int total_non_flip = this->NonFlipList(this->Board, this->Color, non_flip_moves);
-	int flip_moves[32];
-	//int total_flip = this->FlipList(flip_moves);
-	//fprintf(stderr, "non_flip: %d, flip: %d\n", total_non_flip, total_flip);
-
-	// move decision (searching happens here)
-	int Answer = 0;
-
-	#ifdef RANDOM // random decision on move
-	// if able to do non-flip move
-	if ( total_non_flip > 0 ) {
-		Answer = non_flip_moves[rand()%total_non_flip];
-	} else if ( total_flip > 0 ) {
-		Answer = flip_moves[rand()%total_flip];
-	} else {
-		fprintf(stderr, "ERROR: no legal move\n");
-		exit(1);
-	}
-	#endif
-*/
-	// move translation 
-	//int startPoint = Answer/100;
-	//int endPoint   = Answer%100;
-	//sprintf(move, "%c%c-%c%c",'a'+(startPoint%4),'1'+(7-startPoint/4),'a'+(endPoint%4),'1'+(7-endPoint/4));
-	
-	//char chess_Start[10] = "", chess_End[10] = "";
-	//Print_Chess(Board[startPoint],chess_Start);
-	//Print_Chess(Board[endPoint],chess_End);
-	
-	//fprintf(stderr, "My move:\n");
-	//fprintf(stderr, "<%s> -> <%s>\n",chess_Start,chess_End);
-	//fprintf(stderr, "move:%s\n",move);
-	//this->Print_Chessboard();
-
 	//my code...
 	struct Move moveOut;
-	state.myTurn=1;
+	state.setMyTurn(1);
 
 	fprintf(stderr, "**********Play**********\n");
 	fprintf(stderr,"using time >> %d ms\n",countTime());fflush(stderr);
@@ -513,9 +442,9 @@ void CDCagent::Play(char move[6]) {
 	}
 	//AI::move(moveOut);
 	std::string strColor="";
-	if(state.myColor==chessColor::red)
+	if(state.myColor()==chessColor::red)
 		strColor="I'm red";
-	else if(state.myColor==chessColor::black)
+	else if(state.myColor()==chessColor::black)
 		strColor="I'm black";
 	else
 		strColor="I don't know my color...";

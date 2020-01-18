@@ -45,28 +45,31 @@ namespace chessNum{
 	static const Chess knight	=(Chess)0b0100;
 	static const Chess cannon	=(Chess)0b0101;
 	static const Chess pawn		=(Chess)0b0110;
+
+	static const Chess min		=(Chess)0b0000;
+	static const Chess max		=(Chess)0b1111;
 };
 
 namespace chessChar{
-	static const char empty='-';
-	static const char dark='X';
+	static const char empty			='-';
+	static const char dark			='X';
 	namespace red{
-		static const char king='K';
-		static const char guard='G';
-		static const char elephant='M';
-		static const char rook='R';
-		static const char knight='N';
-		static const char cannon='C';
-		static const char pawn='P';
+		static const char king		='K';
+		static const char guard		='G';
+		static const char elephant	='M';
+		static const char rook		='R';
+		static const char knight	='N';
+		static const char cannon	='C';
+		static const char pawn		='P';
 	};
 	namespace black{
-		static const char king='k';
-		static const char guard='g';
-		static const char elephant='m';
-		static const char rook='r';
-		static const char knight='n';
-		static const char cannon='c';
-		static const char pawn='p';
+		static const char king		='k';
+		static const char guard		='g';
+		static const char elephant	='m';
+		static const char rook		='r';
+		static const char knight	='n';
+		static const char cannon	='c';
+		static const char pawn		='p';
 	};
 };
 
@@ -100,4 +103,35 @@ namespace moveType{
 	static const int jump=1;
 	static const int flip=2;
 };
+
+namespace material_value{
+	static const Score king_value		= (Score)6 ;
+	static const Score guard_value		= (Score)5 ;
+	static const Score elephant_value	= (Score)4 ;
+	static const Score rook_value		= (Score)3 ;
+	static const Score knight_value		= (Score)2 ;
+	static const Score cannon_value		= (Score)4 ;
+	static const Score pawn_value		= (Score)1 ;
+	static const Score empty_value		= (Score)0 ;
+	static const Score dark_value		= (Score)0 ;
+
+	static const Score pawn_with_king		= (Score)100 ;
+	static const Score cannon_without_king	= (Score)100 ;
+};
+
+inline Color flipColor(Color colorIn){
+#ifdef _WARNING_MESSAGE_
+	if(colorIn!=chessColor::red&&colorIn!=chessColor::black)
+		std::cout<<"Warning:void flipColor(Color)>>input color is unknown..."<<std::endl;
+#endif
+	return (Color)(((int)colorIn)^0b0001);
+}
+
+inline Color color(Chess chessIn){
+	return (Color)(((int)chessIn)>>3);
+}
+
+inline Chess chessType(Chess chessIn){
+	return (Chess)(((int)chessIn)&0b0111);
+}
 #endif

@@ -45,6 +45,169 @@ struct Move{
 	static const int maxBranch=12*4+16*3+4*2+4*4;
 };
 
+class BigChess{
+public:
+	Chess big[2];
+	BigChess(){init();};
+	void init(){big[(int)chessColor::red]=chessNum::red::king;big[(int)chessColor::black]=chessNum::black::king;};
+	inline void reset(const int movableListIn[],const int closedChessIn[]);
+	inline int addChessAfter(const int movableListIn[],const int closedChessIn[],Chess added);
+	inline int removeChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten);
+	inline int isBadPosition(const int movableListIn[],const int closedChessIn[],Color colorIn)const;
+};
+
+inline int isBadPosition(const int movableListIn[],const int closedChessIn[],Color colorIn)const{
+	//if(chessType(big[colorIn])<chessNum::cannon){//Isn't cannon or pawn
+		//return ;
+	//}
+
+	//Don't worry if having any cannon...
+	if(movableListIn[((int)colorIn)<<3|chessNum::cannon]+closedChessIn[((int)colorIn)<<3|chessNum::cannon])
+		return 0;
+
+	//If enemy's king is alive,but yours dead...
+	if((movableListIn[((int)flipColor(colorIn))<<3|chessNum::king]+closedChessIn[((int)flipColor(colorIn))<<3|chessNum::king])&&
+		!(movableListIn[((int)colorIn)<<3|chessNum::king]+closedChessIn[((int)colorIn)<<3|chessNum::king])){
+		//And you don't have any pawn,you're dammed!!
+		if(!(movableListIn[((int)colorIn)<<3|chessNum::pawn]+closedChessIn[((int)colorIn)<<3|chessNum::pawn]))
+			return 1;
+
+	}
+}
+
+//input lists must have been refreshed...
+inline int BigChess::addChessAfter(const int movableListIn[],const int closedChessIn[],Chess added){
+	if((chessType(added) == chessNum::cannon)||(chessType(added)==chessNum::pawn)||(chessType(added)==chessNum::king)){
+		reset(movableListIn,closedChessIn);
+		return 1;
+	}
+	if(chessType(added)>=big[color(added)])return 0;
+	reset(movableListIn,closedChessIn);
+	return 1;
+}
+
+//input lists must have been refreshed...
+inline int BigChess::removeChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten){
+	if(eaten!=big[color(eaten)])return 0;
+	if(movableListIn[eaten] + closedChessIn[eaten])return 0;
+	reset(movableListIn,closedChessIn);
+	return 1;
+}
+
+inline void BigChess::reset(const int movableListIn[],const int closedChessIn[]){
+	for(big[chessColor::red]=chessNum::red::king;big[chessColor::red]<=chessNum::red::pawn;big[chessColor::red]++){
+		if(closedChessIn[big[chessColor::red]]+movableListIn[big[chessColor::red]])break;
+	}
+	for(big[chessColor::black]=chessNum::black::king;big[chessColor::black]<=chessNum::black::pawn;big[chessColor::black]++){
+		if(closedChessIn[big[chessColor::black]]+movableListIn[big[chessColor::black]])break;
+	}
+	if(big[chessColor::red] > (Chess)chessType(big[chessColor::black])){
+		if((closedChessIn[chessNum::red::cannon]+movableListIn[chessNum::red::cannon]))
+			big[chessColor::red]=chessNum::red::cannon;
+		else if((big[chessColor::black]==chessNum::black::king)&&
+			((closedChessIn[chessNum::red::pawn]+movableListIn[chessNum::red::pawn])))
+			big[chessColor::red]=chessNum::red::pawn;
+	}
+
+	if(big[chessColor::red] < (Chess)chessType(big[chessColor::black])){
+		if((closedChessIn[chessNum::black::cannon]+movableListIn[chessNum::black::cannon]))
+			big[chessColor::black]=chessNum::black::cannon;
+		else if((big[chessColor::red]==chessNum::red::king)&&
+			((closedChessIn[chessNum::black::pawn]+movableListIn[chessNum::black::pawn])))
+			big[chessColor::black]=chessNum::black::pawn;
+	}
+}
+
+class MaterialValue{
+public:
+	struct colorMaterialValue{
+		Score king;
+		Score guard;
+		Score elephant;
+		Score rook;
+		Score knight;
+		Score pawn;
+		Score cannon;
+		Chess bigChess;
+	}red,black;
+	//Chess bigChess[2];
+	BigChess big;
+	Score value[CHESS_NUM];
+
+	inline MaterialValue();
+	inline void init();
+	inline void initValue();
+	inline void reset(const int movableListIn[],const int closedChessIn[]);
+	inline void resetValue(const int movableListIn[],const int closedChessIn[]);
+	inline void removeChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten);
+	inline void addChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten);
+	std::string toString();
+};
+
+inline void MaterialValue::addChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten){
+	if(big.addChessAfter(movableListIn,closedChessIn,eaten))
+		resetValue(movableListIn,closedChessIn);
+}
+
+inline void MaterialValue::removeChessAfter(const int movableListIn[],const int closedChessIn[],Chess eaten){
+	if(big.removeChessAfter(movableListIn,closedChessIn,eaten))
+		resetValue(movableListIn,closedChessIn);
+}
+
+inline void MaterialValue::initValue(){
+	value[(int)chessNum::red::king]			=	material_value::king_value;
+	value[(int)chessNum::red::guard]		=	material_value::guard_value;
+	value[(int)chessNum::red::elephant]		=	material_value::elephant_value;
+	value[(int)chessNum::red::rook]			=	material_value::rook_value;
+	value[(int)chessNum::red::knight]		=	material_value::knight_value;
+	value[(int)chessNum::red::cannon]		=	material_value::cannon_value;
+	value[(int)chessNum::red::pawn]			=	material_value::pawn_with_king;
+	value[(int)chessNum::black::king]		=	material_value::king_value;
+	value[(int)chessNum::black::guard]		=	material_value::guard_value;
+	value[(int)chessNum::black::elephant]	=	material_value::elephant_value;
+	value[(int)chessNum::black::rook]		=	material_value::rook_value;
+	value[(int)chessNum::black::knight]		=	material_value::knight_value;
+	value[(int)chessNum::black::cannon]		=	material_value::cannon_value;
+	value[(int)chessNum::black::pawn]		=	material_value::pawn_with_king;
+	value[(int)chessNum::empty]				=	material_value::empty_value;
+	value[(int)chessNum::dark]				=	material_value::dark_value;
+}
+
+inline void MaterialValue::init(){
+	initValue();
+	big.init();
+}
+
+inline void MaterialValue::reset(const int movableListIn[],const int closedChessIn[]){
+	big.reset(movableListIn,closedChessIn);
+	resetValue(movableListIn,closedChessIn);
+}
+
+inline void MaterialValue::resetValue(const int movableListIn[],const int closedChessIn[]){
+	initValue();
+	//if red king dead,decreasing black pawn's value...
+	if(movableListIn[(int)chessNum::red::king]+closedChessIn[(int)chessNum::red::king]){
+		value[(int)chessNum::black::pawn]=material_value::pawn_with_king;
+	}
+	else
+		value[(int)chessNum::black::pawn]=material_value::pawn_value;
+
+	//if red largest chess smaller than black,rising red cannon's value
+	//if()
+		//value[(int)chessNum::red::cannon]=material_value::cannon_without_king;
+
+	//if black king alive,rising red pawn's value...
+	//if black king dead,rising black cannon's value
+	if(!(movableListIn[(int)chessNum::black::king]+closedChessIn[(int)chessNum::black::king])){
+		value[(int)chessNum::red::pawn]=material_value::pawn_value;
+		value[(int)chessNum::black::cannon]=material_value::cannon_without_king;
+	}
+}
+
+inline MaterialValue::MaterialValue(){
+	init();
+}
+
 class BoardState{
 public:
 	struct PieceList{
@@ -52,17 +215,18 @@ public:
 		int where;
 		struct PieceList& operator=(const struct PieceList& pl){chess=pl.chess;where=pl.where;return *this;};
 	};
+private:
+	Color _myColor;
 public:
 	struct PieceList pieceList[2*16];
 	int pieceListIndex[CHESS_NUM];
 
-	Color myColor;
-	int myTurn;
+	int _myTurn;
 	Chess board[CHESS_NUM];
 	int closedChess[2*8];
 	int movableNum[2];
 	int closedNum[2];
-	Chess movableList[2*8];
+	int movableList[2*8];
 	static const int goNextPos[4*32];
 #ifdef _USING_TRANS_TABLE_
 	KeyType hashValue;
@@ -80,6 +244,10 @@ public:
 	static int charToInt(char chIn);
 	static char intToChar(int intIn);
 	static inline Color flipColor(Color colorIn);
+	inline void setColor(Color colorIn);
+	inline Color myColor()const;
+	inline void setMyTurn(int myTurnIn);
+	inline int myTurn()const;
 	inline void flipTurn();
 
 	inline int canMove(struct Move& moveIn)const;
@@ -107,6 +275,7 @@ public:
 	inline int isNext(int pos1,int pos2,int& dir);
 
 	inline BoardState();
+	inline void rehash();
 
 	friend void testJumpTable();
 private:
@@ -117,7 +286,7 @@ private:
 	inline void addToPieceList(int currentPos,int chessIn);
 };
 
-inline BoardState::BoardState():myColor(chessColor::unknown){
+inline BoardState::BoardState():_myColor(chessColor::unknown){
 }
 
 inline int BoardState::isNext(int pos1,int pos2,int& dirOut){
@@ -403,15 +572,11 @@ inline int BoardState::isMovable(Chess chessIn){
 }
 
 inline Color BoardState::colorWithoutCheck(Chess chessIn){
-	return (Color)(((int)chessIn)>>3);
+	return color(chessIn);
 }
 
 inline Color BoardState::flipColor(Color colorIn){
-#ifdef _WARNING_MESSAGE_
-	if(colorIn!=chessColor::red&&colorIn!=chessColor::black)
-		std::cout<<"Warning:void BoardState::flipColor()>>input color is unknown..."<<std::endl;
-#endif
-	return (Color)(((int)colorIn)^0b0001);
+	return flipColor(colorIn);
 }
 
 inline void BoardState::flipTurn(){
@@ -421,11 +586,11 @@ inline void BoardState::flipTurn(){
 #ifdef _USING_TRANS_TABLE_
 	hashValue=TransTable::flipColor(hashValue);
 #endif
-	myTurn^=0b0001;
+	_myTurn^=0b0001;
 }
 
 inline Chess BoardState::type(Chess chessIn){
-	return ((int)chessIn)&0b0111;
+	return chessType(chessIn);
 }
 
 inline int BoardState::isOver()const{
@@ -434,6 +599,35 @@ inline int BoardState::isOver()const{
 	if((movableNum[(int)chessColor::black]==0)&&(closedNum[(int)chessColor::black]==0))
 		return 1;
 	return 0;
+}
+
+inline void BoardState::setColor(Color colorIn){
+	_myColor=colorIn;
+	rehash();
+}
+
+inline Color BoardState::myColor()const{
+	return this->_myColor;
+}
+
+inline int BoardState::myTurn()const{
+	return this->_myTurn;
+}
+
+inline void BoardState::setMyTurn(int myTurnIn){
+	_myTurn=myTurnIn;
+	rehash();
+}
+
+inline void BoardState::rehash(){
+#ifdef _USING_TRANS_TABLE_
+	for(int i=0;i<CHESS_NUM;i++)if(board[i]<chessNum::min||board[i]>chessNum::max)return;
+	if(myColor()==chessColor::red||myColor()==chessColor::black)
+		hashValue=TransTable::hash(TransTable::hash((myTurn())?myColor():flipColor(myColor())),
+			TransTable::hash(board));
+	else
+		hashValue=TransTable::hash(board);
+#endif
 }
 
 void printEatTable();

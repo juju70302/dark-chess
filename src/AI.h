@@ -2,6 +2,7 @@
 #include "search.h"
 #include "board_state.h"
 #include <chrono>
+#include <random>
 
 #ifndef _AI_H_
 #define _AI_H_
@@ -9,7 +10,9 @@ class AI{
 private:
 	static const int MIN_SEARCH_DEPTH=3;
 	static const int MAX_SEARCH_DEPTH=100;
-	static const int MAX_STEP=100;
+	static const int MAX_STEP=60;
+private:
+	std::random_device rand;
 public:
 	BoardState state;
 	TransTable transTable;
@@ -21,6 +24,9 @@ public:
 	void startGameMove(struct Move& moveOut);
 	void completeSearchMove(struct Move& moveOut,int milliseconds);
 	void noFlipSearchMove(struct Move& moveOut,int milliseconds);
+	void randomMove(struct Move& moveOut);
+
+
 	int chooseFlip();
 
 	int move(const struct Move& moveIn);

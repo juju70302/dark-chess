@@ -7,21 +7,6 @@
 
 #define negaScout negaScout2
 
-namespace material_value{
-	static const Score king_value		= (Score)6 ;
-	static const Score guard_value		= (Score)5 ;
-	static const Score elephant_value	= (Score)4 ;
-	static const Score rook_value		= (Score)3 ;
-	static const Score knight_value		= (Score)2 ;
-	static const Score cannon_value		= (Score)4 ;
-	static const Score pawn_value		= (Score)1 ;
-	static const Score empty_value		= (Score)0 ;
-	static const Score dark_value		= (Score)0 ;
-
-	static const Score pawn_with_king		= (Score)5 ;
-	static const Score cannon_without_king	= (Score)5 ;
-};
-
 //------------------------------predeclared funcion----------------------------------------
 inline Score evaluatingFunction(const BoardState& boardIn);
 inline Score materialValues(const BoardState& boardIn);
@@ -42,7 +27,7 @@ inline float chanceNodeSearch(BoardState& boardIn,int posIn,Score alpha,Score be
 //------------------------------defining funcion----------------------------------------
 inline int moveOrdering(const BoardState& boardIn,Move moveList[],int order[],int moveNum){
 #ifdef _USING_MOVE_ORDERING_
-	Chess ourLarge,emyLarge;Color clr=(boardIn.myTurn)?boardIn.myColor:boardIn.flipColor(boardIn.myColor);
+	Chess ourLarge,emyLarge;Color clr=(boardIn.myTurn())?boardIn.myColor():boardIn.flipColor(boardIn.myColor());
 	if(clr==chessColor::red)boardIn.largestChess(ourLarge,emyLarge);
 	else boardIn.largestChess(emyLarge,ourLarge);
 
@@ -155,7 +140,7 @@ inline Score negaScout2(BoardState& boardIn,Score alpha,Score beta,int depth)
 #endif
 
 	//generating move...
-	moveNum=generateMove(boardIn,moveList,(boardIn.myTurn==0)?boardIn.flipColor(boardIn.myColor):boardIn.myColor,order);
+	moveNum=generateMove(boardIn,moveList,(boardIn.myTurn()==0)?boardIn.flipColor(boardIn.myColor()):boardIn.myColor(),order);
 
 	if(moveNum==0){
 		return evaluatingFunction(boardIn);
@@ -300,7 +285,7 @@ inline Score negaScout1(BoardState& boardIn,Score alpha,Score beta,int depth)
 #endif
 
 	//generating move...
-	moveNum=generateMoveWithoutFlip(boardIn,moveList,(boardIn.myTurn==0)?boardIn.flipColor(boardIn.myColor):boardIn.myColor,order);
+	moveNum=generateMoveWithoutFlip(boardIn,moveList,(boardIn.myTurn()==0)?boardIn.flipColor(boardIn.myColor()):boardIn.myColor(),order);
 
 	if(moveNum==0){
 		return evaluatingFunction(boardIn);
@@ -413,7 +398,7 @@ inline float chanceNodeSearch(BoardState& boardIn,int posIn,Score alpha,Score be
 }
 
 inline int noFlipMoveNum(const BoardState& boardIn){
-	Color colorIn=(boardIn.myTurn)?boardIn.myColor:BoardState::flipColor(boardIn.myColor);
+	Color colorIn=(boardIn.myTurn())?boardIn.myColor():BoardState::flipColor(boardIn.myColor());
 	int moveNum=0;
 	int currentPos,nextPos;
 	Chess nextChess;
@@ -539,7 +524,7 @@ inline int generateMoveWithoutFlip(BoardState& boardIn,Move moveList[],Color tur
 inline Score evaluatingFunction(const BoardState& boardIn){
 	static const int c1=1;
 
-	return ((boardIn.myTurn==0)?-1:1)*c1*materialValues(boardIn);
+	return ((boardIn.myTurn()==0)?-1:1)*c1*materialValues(boardIn);
 }
 
 inline Score materialValues(const BoardState& boardIn){
@@ -572,7 +557,7 @@ inline Score materialValues(const BoardState& boardIn){
 }
 
 inline Score closedMaterialValues(const BoardState& boardIn,const Score materialValueTable[16]){
-	Color clr=boardIn.myColor;
+	Color clr=boardIn.myColor();
 	Score value;
 	if(clr==chessColor::unknown)return 0;
 
@@ -594,7 +579,7 @@ inline Score closedMaterialValues(const BoardState& boardIn,const Score material
 }
 
 inline Score openMaterialValues(const BoardState& boardIn,const Score materialValueTable[16]){
-	Color clr=boardIn.myColor;
+	Color clr=boardIn.myColor();
 	Score value;
 	if(clr==chessColor::unknown)return 0;
 

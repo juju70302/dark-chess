@@ -1,9 +1,6 @@
 #include "board_state.h"
 
 void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColorIn){
-	myColor=myColorIn;
-	myTurn=(myFirstIn==0)?0:1;
-
 	movableNum[0]=0;movableNum[1]=0;closedNum[0]=0;closedNum[1]=0;
 	for(int i=0;i<2;i++)for(int j=0;j<7;j++)movableList[(i<<3)|j]=0;
 	for(int i=0;i<CHESS_NUM;i++){
@@ -26,10 +23,12 @@ void BoardState::init(char bdIn[],int closedChessIn[],int myFirstIn,Color myColo
 			closedNum[i]+=closedChess[(i<<3)|j];
 		}
 	}
+	setColor(myColorIn);
+	setMyTurn((myFirstIn==0)?0:1);
+
 #ifdef _USING_TRANS_TABLE_
-	if((myColor==chessColor::red)||(myColor==chessColor::black))
-		hashValue=TransTable::hash(TransTable::hash((myTurn)?myColor:flipColor(myColor)),
-			TransTable::hash(board));
+	if((myColor()==chessColor::red)||(myColor()==chessColor::black))
+		rehash();
 #endif
 }
 
@@ -82,6 +81,28 @@ void BoardState::printPieceList()const{
 	std::cout<<std::endl;
 }
 
+std::string MaterialValue::toString(){
+	std::stringstream ss;ss.clear();ss.str("");
+	ss<<"  red\t\tblack\n";
+	ss<<"["<<chessChar::red::king<<"] = "<<value[chessNum::red::king]<<"\t\t";
+	ss<<"["<<chessChar::black::king<<"] = "<<value[chessNum::black::king]<<std::endl;
+	ss<<"["<<chessChar::red::guard<<"] = "<<value[chessNum::red::guard]<<"\t\t";
+	ss<<"["<<chessChar::black::guard<<"] = "<<value[chessNum::black::guard]<<std::endl;
+	ss<<"["<<chessChar::red::elephant<<"] = "<<value[chessNum::red::elephant]<<"\t\t";
+	ss<<"["<<chessChar::black::elephant<<"] = "<<value[chessNum::black::elephant]<<std::endl;
+	ss<<"["<<chessChar::red::rook<<"] = "<<value[chessNum::red::rook]<<"\t\t";
+	ss<<"["<<chessChar::black::rook<<"] = "<<value[chessNum::black::rook]<<std::endl;
+	ss<<"["<<chessChar::red::knight<<"] = "<<value[chessNum::red::knight]<<"\t\t";
+	ss<<"["<<chessChar::black::knight<<"] = "<<value[chessNum::black::knight]<<std::endl;
+	ss<<"["<<chessChar::red::cannon<<"] = "<<value[chessNum::red::cannon]<<"\t\t";
+	ss<<"["<<chessChar::black::cannon<<"] = "<<value[chessNum::black::cannon]<<std::endl;
+	ss<<"["<<chessChar::red::pawn<<"] = "<<value[chessNum::red::pawn]<<"\t\t";
+	ss<<"["<<chessChar::black::pawn<<"] = "<<value[chessNum::black::pawn]<<std::endl;
+	ss<<"["<<chessChar::empty<<"] = "<<value[chessNum::empty]<<"\t\t";
+	ss<<"["<<chessChar::dark<<"] = "<<value[chessNum::dark]<<std::endl;
+	return ss.str();
+}
+
 void BoardState::print()const{
 	for(int i=0;i<2;i++){
 		for(int j=0;j<BOARD_LENGTH;j++)
@@ -98,11 +119,11 @@ void BoardState::print()const{
 		std::cout<<movableNum[i-2]<<"  X: "<<closedNum[i-2]<<std::endl;
 	}
 	std::cout<<"my color>> ";
-	if(myColor==chessColor::red)std::cout<<"r";
-	else if(myColor==chessColor::black)std::cout<<"b";
+	if(myColor()==chessColor::red)std::cout<<"r";
+	else if(myColor()==chessColor::black)std::cout<<"b";
 	else std::cout<<"?";
 	std::cout<<"\twho's turn>> ";
-	if(myTurn)std::cout<<"me";
+	if(myTurn())std::cout<<"me";
 	else std::cout<<"opponent";
 	std::cout<<std::endl;
 }

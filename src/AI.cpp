@@ -1,5 +1,11 @@
 #include "AI.h"
 
+int AI::countTime(){
+	if((step/2)<MAX_STEP-10)
+		return(int)((remainMilliSecond)/(MAX_STEP-(step/2)));
+	return(int)((remainMilliSecond)/20);
+}
+
 char AI::chessChange(char in){
 
 	return BoardState::intToChar(BoardState::charToInt(in));
@@ -17,6 +23,11 @@ void AI::positionChange(char& m0,char& m1,int posIn){
 void AI::moveGenerator(struct Move& moveOut){
 	std::chrono::high_resolution_clock::time_point start,stop;
 	start = std::chrono::high_resolution_clock::now();
+#ifdef RANDOM_MOVE
+	randomMove(moveOut);
+	stop=std::chrono::high_resolution_clock::now();
+	remainMilliSecond-=(std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count());
+#else
 	if(step<=1){
 		startGameMove(moveOut);
 		stop=std::chrono::high_resolution_clock::now();
@@ -44,7 +55,7 @@ void AI::moveGenerator(struct Move& moveOut){
 		remainMilliSecond-=(std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count());
 		return;
 	}
-
+#endif
 }
 
 void AI::chooseOneForFlip(struct Move& moveOut){
@@ -54,14 +65,8 @@ void AI::chooseOneForFlip(struct Move& moveOut){
 		moveOut.currentChess=chessNum::dark;
 }
 
-int AI::countTime(){
-	if(step<MAX_STEP-10)
-		return(int)((1000*totalSecond)/(MAX_STEP));
-	return(int)((remainMilliSecond)/20);
-}
-
 int AI::chooseFlip(){
-	Color enemy=(state.myTurn)?BoardState::flipColor(state.myColor):state.myColor;
+	Color enemy=(state.myTurn())?BoardState::flipColor(state.myColor()):state.myColor();
 
 	for(int i=0;i<CHESS_NUM;i++){
 		int safe=1;
@@ -83,13 +88,23 @@ int AI::chooseFlip(){
 	return chessPos::illegal;
 }
 
+//------------------------------move generate strategy------------------------------
+
+void AI::randomMove(struct Move& moveOut){
+	struct Move moveList[Move::maxBranch+1];
+	int order[Move::maxBranch+1];
+	Color turn=(state.myTurn())?state.myColor():state.flipColor(state.myColor());
+	int moveNum=generateMove(state,moveList,turn,order);
+	moveOut=moveList[rand()%moveNum];
+}
+
 void AI::noFlipSearchMove(struct Move& moveOut,int milliseconds){
 	std::chrono::high_resolution_clock::time_point start,stop;
 	start = std::chrono::high_resolution_clock::now();
 	int branch,usingTime;
 
 	struct Move moveList[Move::maxBranch+1];int order[Move::maxBranch+1];
-	Color turn=(state.myTurn)?state.myColor:state.flipColor(state.myColor);
+	Color turn=(state.myTurn())?state.myColor():state.flipColor(state.myColor());
 	branch=generateMove(state,moveList,turn,order);
 	branch+=(state.closedNum[0]+state.closedNum[1]);
 
@@ -118,7 +133,7 @@ void AI::completeSearchMove(struct Move& moveOut,int milliseconds){
 	int branch;
 
 	struct Move moveList[Move::maxBranch+1];int order[Move::maxBranch+1];
-	Color turn=(state.myTurn)?state.myColor:state.flipColor(state.myColor);
+	Color turn=(state.myTurn())?state.myColor():state.flipColor(state.myColor());
 	branch=generateMove(state,moveList,turn,order);
 	branch+=(state.closedNum[0]+state.closedNum[1]);
 
@@ -153,7 +168,7 @@ Score AI::noFlipNegaScout(int depth,struct Move& moveOut){
 	Score maxScore,thisScore;
 
 	//generating move...
-	moveNum=generateMove(state,moveList,(state.myTurn==0)?state.flipColor(state.myColor):state.myColor,order);
+	moveNum=generateMove(state,moveList,(state.myTurn()==0)?state.flipColor(state.myColor()):state.myColor(),order);
 
 	if(moveNum==0)return (Score)0;
 
@@ -208,7 +223,7 @@ Score AI::completeNegaScout(int depth,struct Move& moveOut){
 	Score maxScore,thisScore;
 
 	//generating move...
-	moveNum=generateMove(state,moveList,(state.myTurn==0)?state.flipColor(state.myColor):state.myColor,order);
+	moveNum=generateMove(state,moveList,(state.myTurn()==0)?state.flipColor(state.myColor()):state.myColor(),order);
 
 	if(moveList[order[0]].type==moveType::flip){
 		maxScore=chance_node(0,depth);
@@ -252,7 +267,7 @@ void AI::startGameMove(struct Move& moveOut){
 		moveOut.type=moveType::flip;
 		moveOut.currentPos=firstFlipPos;
 		moveOut.nextPos=firstFlipPos;
-		state.myTurn=1;
+		state.setMyTurn(1);
 		return;
 	}
 
@@ -264,7 +279,7 @@ void AI::startGameMove(struct Move& moveOut){
 				break;
 			}
 		}
-		state.myTurn=1;
+		state.setMyTurn(1);
 		for(int i=0;i<CHESS_NUM;i++){
 			if(state.board[i]!=chessNum::dark){
 				firstFlipChess=state.board[i];
@@ -302,10 +317,10 @@ void AI::startGameMove(struct Move& moveOut){
 int AI::move(const struct Move& moveIn){
 	struct Move moveTest;moveTest=moveIn;
 	if(!state.canMove(moveTest))return 0;
-	if((step <= 0)&&(state.myColor != chessColor::red)&&(state.myColor != chessColor::black)){
+	if((step <= 0)&&(state.myColor() != chessColor::red)&&(state.myColor() != chessColor::black)){
 		//first step,set color...
-		state.myColor=BoardState::colorWithoutCheck(moveIn.nextChess);
-		if(!state.myTurn)state.myColor=BoardState::flipColor(state.myColor);
+		state.setColor(BoardState::colorWithoutCheck(moveIn.nextChess));
+		if(!state.myTurn())state.setColor(BoardState::flipColor(state.myColor()));
 	}
 
 	state.moveWithoutCheck(moveIn);
